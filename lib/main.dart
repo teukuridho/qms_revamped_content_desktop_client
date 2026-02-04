@@ -1,7 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:qms_revamped_content_desktop_client/app_directory/app_directory_service.dart';
+import 'package:qms_revamped_content_desktop_client/database/app_database_manager.dart';
+import 'package:qms_revamped_content_desktop_client/init/screen/init_screen.dart';
+import 'package:qms_revamped_content_desktop_client/init/service/init_service.dart';
+import 'package:qms_revamped_content_desktop_client/init/view_model/init_view_model.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        // App directory
+        Provider(create: (context) => AppDirectoryService()),
+
+        // App Database
+        Provider(
+          create: (context) =>
+              AppDatabaseManager(appDirectoryService: context.read()),
+        ),
+
+        // Init
+        Provider(
+          create: (context) => InitService(
+            appDirectoryService: context.read(),
+            appDatabaseManager: context.read(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => InitViewModel(initService: context.read()),
+        ),
+      ],
+      child: const MyAppTwo(),
+    ),
+  );
+}
+
+class MyAppTwo extends StatefulWidget {
+  const MyAppTwo({super.key});
+
+  @override
+  State<MyAppTwo> createState() => _MyAppTwoState();
+}
+
+class _MyAppTwoState extends State<MyAppTwo> {
+  @override
+  void initState() {
+    Provider.of<InitViewModel>(context, listen: false).init();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: "QMS Content",
+      home: InitScreen(model: Provider.of<InitViewModel>(context, listen: false)),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
