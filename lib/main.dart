@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qms_revamped_content_desktop_client/app_directory/app_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/database/app_database_manager.dart';
+import 'package:qms_revamped_content_desktop_client/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/init/screen/init_screen.dart';
 import 'package:qms_revamped_content_desktop_client/init/service/init_service.dart';
 import 'package:qms_revamped_content_desktop_client/init/view_model/init_view_model.dart';
@@ -10,6 +11,9 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
+        // Event manager
+        Provider(create: (context) => EventManager()),
+
         // App directory
         Provider(create: (context) => AppDirectoryService()),
 
@@ -22,6 +26,7 @@ void main() {
         // Init
         Provider(
           create: (context) => InitService(
+            eventManager: context.read(),
             appDirectoryService: context.read(),
             appDatabaseManager: context.read(),
           ),
