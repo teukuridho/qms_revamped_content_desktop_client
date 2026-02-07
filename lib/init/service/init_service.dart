@@ -1,7 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qms_revamped_content_desktop_client/app_directory/app_directory_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/database/app_database_manager.dart';
-import 'package:qms_revamped_content_desktop_client/event_manager/event_manager.dart';
 
 class InitService {
   late final AppDirectoryService _appDirectoryService;
