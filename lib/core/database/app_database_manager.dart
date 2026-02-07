@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:qms_revamped_content_desktop_client/database/app_database.dart';
+import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:drift/drift.dart';
-import 'package:qms_revamped_content_desktop_client/app_directory/app_directory_service.dart';
 
 class AppDatabaseManager {
   late final AppDirectoryService _appDirectoryService;

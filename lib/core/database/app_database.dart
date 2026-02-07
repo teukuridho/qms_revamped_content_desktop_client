@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/entity/server_properties.dart';
 import 'package:qms_revamped_content_desktop_client/media/registry/entity/Media.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:drift/drift.dart';
-import 'package:qms_revamped_content_desktop_client/app_directory/app_directory_service.dart';
 
 part 'app_database.g.dart';
 

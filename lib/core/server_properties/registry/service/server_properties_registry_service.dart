@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
+import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
+import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/event/server_properties_created_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/event/server_properties_updated_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/request/create_server_properties_request.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/update_service_by_name_request.dart';
-import 'package:qms_revamped_content_desktop_client/database/app_database.dart';
-import 'package:qms_revamped_content_desktop_client/database/app_database_manager.dart';
 
 class ServerPropertiesRegistryService {
   late final AppDatabaseManager _appDatabaseManager;
