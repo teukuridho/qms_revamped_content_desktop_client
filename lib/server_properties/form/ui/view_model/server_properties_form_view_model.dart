@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:qms_revamped_content_desktop_client/core/model/process_state.dart';
 import 'package:qms_revamped_content_desktop_client/database/app_database.dart';
 import 'package:qms_revamped_content_desktop_client/server_properties/registry/request/create_server_properties_request.dart';
 import 'package:qms_revamped_content_desktop_client/server_properties/registry/service/server_properties_registry_service.dart';
@@ -16,9 +17,7 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   final TextEditingController serverAddress = TextEditingController();
   final TextEditingController username = TextEditingController();
   final TextEditingController password = TextEditingController();
-  bool saveLoading = false;
-  String? saveError;
-  bool? saveSuccess;
+  ProcessState saveState = ProcessState(state: ProcessStateEnum.none);
 
   ServerPropertiesFormViewModel({
     required ServerPropertiesRegistryService registryService,
@@ -45,7 +44,7 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
 
   Future<void> save() async {
     try {
-      saveLoading = true;
+      saveState = ProcessState(state: ProcessStateEnum.loading);
       notifyListeners();
 
       ServerProperty? serverProperty = await _registryService
@@ -70,12 +69,12 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
         );
       }
 
-      saveSuccess = true;
+      saveState = ProcessState(state: ProcessStateEnum.success);
       notifyListeners();
     } on Exception catch (ex) {
-      saveError = ex.toString();
+      saveState = ProcessState(state: ProcessStateEnum.failed, errorMessage: ex.toString());
     } finally {
-      saveLoading = false;
+      saveState = ProcessState(state: ProcessStateEnum.none, errorMessage: saveState.errorMessage);
       notifyListeners();
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qms_revamped_content_desktop_client/core/model/process_state.dart';
 import 'package:qms_revamped_content_desktop_client/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/utility/selector.dart';
 
@@ -13,6 +14,8 @@ class ServerPropertiesFormView extends StatefulWidget {
 }
 
 class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
+  late final VoidCallback _cancelSaveErrorListener;
+
   @override
   void initState() {
     widget.viewModel.init();
@@ -21,42 +24,54 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
   }
 
   void _attachListeners() {
-    listenTo(widget.viewModel, () => widget.viewModel.saveError, (saveError) {
-      if(saveError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Unable to proceed; $saveError}"),
-            backgroundColor: Colors.red,),
-        );
+    _cancelSaveErrorListener =
+        listenTo(widget.viewModel, () => widget.viewModel.saveState, (saveState) {
+      if (!mounted) return;
+
+      switch(saveState.state) {
+        case ProcessStateEnum.none:
+          return;
+        case ProcessStateEnum.loading:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Loading..."),
+            ),
+          );
+        case ProcessStateEnum.success:
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Success!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        case ProcessStateEnum.failed:
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Unable to proceed; $saveState"),
+              backgroundColor: Colors.red,
+            ),
+          );
       }
     });
-    listenTo(widget.viewModel, () => widget.viewModel.saveSuccess, (saveSuccess) {
-      if(saveSuccess != null && saveSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Success!"),  backgroundColor: Colors.green,),
-        );
-      }
-    });
-    // widget.viewModel.addListener(() {
-    //   String? saveError = widget.viewModel.saveError;
-    //   bool? saveSuccess = widget.viewModel.saveSuccess;
-    //   if(saveError != null) {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(content: Text("Unable to proceed; $saveError}"),  backgroundColor: Colors.red,),
-    //     );
-    //   }
-    //   if(saveSuccess != null && saveSuccess) {
-    //     ScaffoldMessenger.of(context).showSnackBar(
-    //       SnackBar(content: Text("Success!"),  backgroundColor: Colors.green,),
-    //     );
-    //   }
-    // });
   }
 
-  void _handleSubmit() {
+  @override
+  void dispose() {
+    _cancelSaveErrorListener();
+    super.dispose();
+  }
+
+  void _handleButtonSubmit() {
     bool valid = widget.viewModel.formKey.currentState!.validate();
     if(valid) {
       widget.viewModel.save();
     }
+  }
+
+  void _handleSubmitByEnter(String _) {
+    _handleButtonSubmit();
   }
 
   @override
@@ -67,6 +82,7 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
         children: [
           TextFormField(
             controller: widget.viewModel.serverAddress,
+            onFieldSubmitted: _handleSubmitByEnter,
             decoration: InputDecoration(
               labelText: "Server Address",
               border: OutlineInputBorder(),
@@ -83,6 +99,7 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
           Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
           TextFormField(
             controller: widget.viewModel.username,
+            onFieldSubmitted: _handleSubmitByEnter,
             decoration: InputDecoration(
               labelText: "Username",
               border: OutlineInputBorder(),
@@ -99,6 +116,7 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
           Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
           TextFormField(
             controller: widget.viewModel.password,
+            onFieldSubmitted: _handleSubmitByEnter,
             obscureText: true,
             decoration: InputDecoration(
               labelText: "Password",
@@ -116,7 +134,8 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
           Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
           SizedBox(
             width: double.maxFinite,
-            child: ElevatedButton(onPressed: _handleSubmit, child: Text("Submit")),
+            child: ElevatedButton(
+                onPressed: _handleButtonSubmit, child: Text("Submit")),
           ),
         ],
       ),
