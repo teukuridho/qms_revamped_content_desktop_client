@@ -6,6 +6,7 @@ import 'package:qms_revamped_content_desktop_client/event_manager/event_manager.
 import 'package:qms_revamped_content_desktop_client/init/screen/init_screen.dart';
 import 'package:qms_revamped_content_desktop_client/init/service/init_service.dart';
 import 'package:qms_revamped_content_desktop_client/init/view_model/init_view_model.dart';
+import 'package:qms_revamped_content_desktop_client/server_properties/registry/service/server_properties_registry_service.dart';
 
 void main() {
   runApp(
@@ -34,6 +35,14 @@ void main() {
         ChangeNotifierProvider(
           create: (context) => InitViewModel(initService: context.read()),
         ),
+
+        // Server properties
+        Provider(
+          create: (context) => ServerPropertiesRegistryService(
+            appDatabaseManager: context.read(),
+            eventManager: context.read(),
+          ),
+        ),
       ],
       child: const MyAppTwo(),
     ),
@@ -58,7 +67,14 @@ class _MyAppTwoState extends State<MyAppTwo> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: "QMS Content",
-      home: InitScreen(model: Provider.of<InitViewModel>(context, listen: false)),
+      home: InitScreen(
+        model: Provider.of<InitViewModel>(context, listen: false),
+        serverPropertiesRegistryService:
+            Provider.of<ServerPropertiesRegistryService>(
+              context,
+              listen: false,
+            ),
+      ),
     );
   }
 }
