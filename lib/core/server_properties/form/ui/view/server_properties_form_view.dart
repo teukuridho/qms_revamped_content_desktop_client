@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qms_revamped_content_desktop_client/core/model/process_state.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/core/utility/selector.dart';
-import 'package:qms_revamped_content_desktop_client/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
 
 class ServerPropertiesFormView extends StatefulWidget {
   final ServerPropertiesFormViewModel viewModel;

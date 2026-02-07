@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qms_revamped_content_desktop_client/core/init/view_model/init_view_model.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/utility/selector.dart';
-import 'package:qms_revamped_content_desktop_client/init/view_model/init_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/main_screen.dart';
-import 'package:qms_revamped_content_desktop_client/server_properties/registry/service/server_properties_registry_service.dart';
 
 class InitScreen extends StatefulWidget {
   final ServerPropertiesRegistryService serverPropertiesRegistryService;

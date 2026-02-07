@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:qms_revamped_content_desktop_client/server_properties/form/ui/view/server_properties_form_view.dart';
-import 'package:qms_revamped_content_desktop_client/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
-import 'package:qms_revamped_content_desktop_client/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view/server_properties_form_view.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 
 class ServerPropertiesFormScreen extends StatefulWidget {
   final ServerPropertiesRegistryService registryService;
