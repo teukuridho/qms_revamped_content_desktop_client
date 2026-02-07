@@ -5,7 +5,7 @@ import 'package:qms_revamped_content_desktop_client/core/database/app_database.d
 import 'package:qms_revamped_content_desktop_client/core/model/process_state.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/request/create_server_properties_request.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
-import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/update_service_by_name_request.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/request/update_service_by_name_request.dart';
 
 
 class ServerPropertiesFormViewModel extends ChangeNotifier {

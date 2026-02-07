@@ -8,4 +8,10 @@ class Media extends Table {
   TextColumn get path => text()();
 
   IntColumn get position => integer()();
+
+  TextColumn get contentType => text()();
+
+  TextColumn get mimeType => text()();
+
+  TextColumn get tag => text()();
 }

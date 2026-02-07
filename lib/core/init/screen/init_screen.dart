@@ -31,7 +31,6 @@ class _InitScreenState extends State<InitScreen> {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => MainScreen(
-              registryService: widget.serverPropertiesRegistryService,
             ),
           ),
         );

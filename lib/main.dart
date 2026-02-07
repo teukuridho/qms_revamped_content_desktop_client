@@ -7,6 +7,7 @@ import 'package:qms_revamped_content_desktop_client/core/init/screen/init_screen
 import 'package:qms_revamped_content_desktop_client/core/init/service/init_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/init/view_model/init_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
 
 void main() {
   runApp(
@@ -42,6 +43,12 @@ void main() {
             appDatabaseManager: context.read(),
             eventManager: context.read(),
           ),
+        ),
+
+        // Media (main)
+        Provider(
+          create: (context) =>
+              MediaStorageDirectoryService(appDirectoryService: context.read()),
         ),
       ],
       child: const MyAppTwo(),
