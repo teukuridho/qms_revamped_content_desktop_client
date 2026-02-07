@@ -15,7 +15,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
 
-    Provider.of<MediaStorageDirectoryService>(context, listen: false).init();
+    // Provider.of<MediaStorageDirectoryService>(context, listen: false).init();
     super.initState();
   }
   @override
