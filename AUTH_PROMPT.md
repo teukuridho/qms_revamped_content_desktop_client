@@ -33,7 +33,7 @@ Tokens must support **`offline_access`** (target retention ~10 years via realm s
 ---
 
 ## Existing Code Touchpoints
-- `lib/core/auth/auth_service.dart` (currently empty) → replace with real OIDC auth implementation.
+- `lib/core/auth/auth_service.dart` → OIDC auth implementation (browser PKCE + device QR).
 - `lib/core/server_properties/registry/entity/server_properties.dart` → extend table with Keycloak + token fields.
 - `lib/core/server_properties/registry/service/server_properties_registry_service.dart` → add getters/setters for Keycloak config & tokens.
 - `lib/core/server_properties/form/ui/view_model/server_properties_form_view_model.dart` and `.../view/server_properties_form_view.dart` → add Keycloak fields + login actions UI.
@@ -85,11 +85,15 @@ Add to `lib/core/server_properties/registry/entity/server_properties.dart`:
 
 Notes:
 - This repo currently stores secrets in SQLite; keep it consistent. (Optionally later migrate refresh token to secure storage.)
+- Removed legacy basic-auth columns (dropped in schema v7):
+  - `username`, `password`, `cookie`
 
 ### DB migration
 In `lib/core/database/app_database.dart`:
-- Bump `schemaVersion` from `6` → `7`
-- Add `from6To7` migration: drop `username`, `password`, `cookie` from `server_properties`.
+- Bump `schemaVersion` from `5` → `6`:
+  - Add `from5To6` migration: add new Keycloak/OIDC columns to `server_properties` with safe defaults.
+- Bump `schemaVersion` from `6` → `7`:
+  - Add `from6To7` migration: drop `username`, `password`, `cookie` from `server_properties`.
 
 After schema change:
 - Run build runner to regenerate:
@@ -135,10 +139,15 @@ Create `lib/core/auth/oidc/loopback_server.dart`:
     - `Future<Uri> waitForRedirect({Duration timeout})` returns callback URL containing `code` and `state`
 - Respond to browser with a simple HTML “Login completed, you may close this window.”
 - Shut down server after receiving callback.
+- Callback matching should not rely on a fixed path (accept OAuth query parameters on any path).
 
 ### 5) OIDC client (no UI)
 Create `lib/core/auth/oidc/keycloak_oidc_client.dart`:
 Implements raw HTTP calls using `package:http/http.dart`.
+
+Implementation notes:
+- Add reasonable per-request timeouts to avoid stuck polling on network issues.
+- Log request outcomes (status code) without logging tokens.
 
 Methods:
 - `Future<OidcTokenSet> exchangeCodeForTokens(...)`
@@ -157,6 +166,8 @@ Responsibilities:
 - Execute login flows.
 - Persist token fields back to DB for that `serviceName`.
 - Provide `getValidAccessToken()` that refreshes automatically.
+- Emit an `AuthLoggedInEvent` via `EventManager` on successful login (include `serviceName` + metadata, do not include raw tokens).
+- Add logs for all auth operations.
 
 Public API (minimum):
 - `Future<void> loginWithBrowserPkce()`
@@ -164,6 +175,7 @@ Public API (minimum):
 - `Future<void> completeQrLoginByPolling(DeviceAuthorization da)`
 - `Future<String?> getValidAccessToken()`
 - `Future<void> logout()` (clears tokens)
+- `Future<void> cancelBrowserLogin()` (optional, for UX retries)
 
 ---
 
@@ -258,6 +270,11 @@ Update this form to support:
     - “Login (QR)” → Option 2
     - “Logout / Clear Tokens”
 
+UX notes:
+- Show snackbars on login success/failure.
+- Auto-start QR login on startup if Keycloak config is already present and the device is not logged in.
+- Show helper text (example): “Please connect your phone to the same network/VPN as this computer, then scan the QR to sign in.”
+
 ### UI Components to add
 Create `lib/core/auth/ui/auth_section.dart`:
 - Stateless/widget that consumes an `AuthViewModel`.
@@ -312,6 +329,10 @@ In `lib/main.dart` providers list, add:
 Preferred scalable approach:
 - Create `OidcAuthServiceFactory` that returns `OidcAuthService(serviceName: X)`.
 - Inject factory into view models.
+
+Event wiring:
+- Ensure `EventManager` is injected into `OidcAuthService` so it can emit `AuthLoggedInEvent`.
+- Listen with `eventManager.listen<AuthLoggedInEvent>()` where needed.
 
 ---
 
