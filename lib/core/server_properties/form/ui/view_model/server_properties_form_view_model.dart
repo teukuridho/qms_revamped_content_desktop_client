@@ -16,8 +16,9 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   // State
   final formKey = GlobalKey<FormState>();
   final TextEditingController serverAddress = TextEditingController();
-  final TextEditingController username = TextEditingController();
-  final TextEditingController password = TextEditingController();
+  final TextEditingController keycloakBaseUrl = TextEditingController();
+  final TextEditingController keycloakRealm = TextEditingController();
+  final TextEditingController keycloakClientId = TextEditingController();
   ProcessState saveState = ProcessState(state: ProcessStateEnum.none);
 
   ServerPropertiesFormViewModel({
@@ -38,8 +39,9 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
     );
     if (serverProperty != null) {
       serverAddress.text = serverProperty.serverAddress;
-      username.text = serverProperty.username;
-      password.text = serverProperty.password;
+      keycloakBaseUrl.text = serverProperty.keycloakBaseUrl;
+      keycloakRealm.text = serverProperty.keycloakRealm;
+      keycloakClientId.text = serverProperty.keycloakClientId;
     }
   }
 
@@ -55,17 +57,19 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
           CreateServerPropertiesRequest(
             serviceName: _serviceName,
             serverAddress: serverAddress.text,
-            username: username.text,
-            password: password.text,
+            keycloakBaseUrl: keycloakBaseUrl.text,
+            keycloakRealm: keycloakRealm.text,
+            keycloakClientId: keycloakClientId.text,
           ),
         );
       } else {
         _registryService.updateByServiceName(
           UpdateServiceByNameRequest(
             serviceName: _serviceName,
-            username: username.text,
-            password: password.text,
             serverAddress: serverAddress.text,
+            keycloakBaseUrl: keycloakBaseUrl.text,
+            keycloakRealm: keycloakRealm.text,
+            keycloakClientId: keycloakClientId.text,
           ),
         );
       }
@@ -78,5 +82,14 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
       saveState = ProcessState(state: ProcessStateEnum.none, errorMessage: saveState.errorMessage);
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    serverAddress.dispose();
+    keycloakBaseUrl.dispose();
+    keycloakRealm.dispose();
+    keycloakClientId.dispose();
+    super.dispose();
   }
 }

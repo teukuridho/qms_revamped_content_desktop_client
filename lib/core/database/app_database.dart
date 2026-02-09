@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/entity/server_properties.dart';
-import 'package:qms_revamped_content_desktop_client/media/registry/entity/Media.dart';
+import 'package:qms_revamped_content_desktop_client/media/registry/entity/media.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:drift/drift.dart';
@@ -20,7 +20,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +55,43 @@ class AppDatabase extends _$AppDatabase {
       },
       from4To5:  (m, schema) async {
         // No schema changes
+      },
+      from5To6: (m, schema) async {
+        // New OIDC / Keycloak config + token persistence columns on
+        // `server_properties`. These are NOT NULL in v6, so we must provide
+        // values for existing rows.
+        await m.alterTable(
+          TableMigration(
+            schema.serverProperties,
+            newColumns: [
+              schema.serverProperties.keycloakBaseUrl,
+              schema.serverProperties.keycloakRealm,
+              schema.serverProperties.keycloakClientId,
+              schema.serverProperties.oidcAccessToken,
+              schema.serverProperties.oidcRefreshToken,
+              schema.serverProperties.oidcIdToken,
+              schema.serverProperties.oidcExpiresAtEpochMs,
+              schema.serverProperties.oidcScope,
+              schema.serverProperties.oidcTokenType,
+            ],
+            columnTransformer: {
+              schema.serverProperties.keycloakBaseUrl: const Constant(''),
+              schema.serverProperties.keycloakRealm: const Constant(''),
+              schema.serverProperties.keycloakClientId: const Constant(''),
+              schema.serverProperties.oidcAccessToken: const Constant(''),
+              schema.serverProperties.oidcRefreshToken: const Constant(''),
+              schema.serverProperties.oidcIdToken: const Constant(''),
+              schema.serverProperties.oidcExpiresAtEpochMs: const Constant(0),
+              schema.serverProperties.oidcScope: const Constant(''),
+              schema.serverProperties.oidcTokenType: const Constant(''),
+            },
+          ),
+        );
+      },
+      from6To7: (m, schema) async {
+        // Drop legacy basic-auth fields (username/password/cookie) from
+        // `server_properties`.
+        await m.alterTable(TableMigration(schema.serverProperties));
       },
     ),
   );

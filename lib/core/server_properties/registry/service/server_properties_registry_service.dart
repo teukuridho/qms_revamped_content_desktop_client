@@ -40,9 +40,9 @@ class ServerPropertiesRegistryService {
           ServerPropertiesCompanion.insert(
             serviceName: request.serviceName,
             serverAddress: request.serverAddress,
-            username: request.username,
-            password: request.password,
-            cookie: "",
+            keycloakBaseUrl: Value(request.keycloakBaseUrl),
+            keycloakRealm: Value(request.keycloakRealm),
+            keycloakClientId: Value(request.keycloakClientId),
           ),
         );
 
@@ -59,9 +59,15 @@ class ServerPropertiesRegistryService {
         )..where((e) => e.serviceName.equals(request.serviceName))).writeReturning(
           ServerPropertiesCompanion(
             serverAddress: Value.absentIfNull(request.serverAddress),
-            username: Value.absentIfNull(request.username),
-            password: Value.absentIfNull(request.password),
-            cookie: Value.absentIfNull(request.cookies),
+            keycloakBaseUrl: Value.absentIfNull(request.keycloakBaseUrl),
+            keycloakRealm: Value.absentIfNull(request.keycloakRealm),
+            keycloakClientId: Value.absentIfNull(request.keycloakClientId),
+            oidcAccessToken: Value.absentIfNull(request.oidcAccessToken),
+            oidcRefreshToken: Value.absentIfNull(request.oidcRefreshToken),
+            oidcIdToken: Value.absentIfNull(request.oidcIdToken),
+            oidcExpiresAtEpochMs: Value.absentIfNull(request.oidcExpiresAtEpochMs),
+            oidcScope: Value.absentIfNull(request.oidcScope),
+            oidcTokenType: Value.absentIfNull(request.oidcTokenType),
           ),
         ))
         .firstOrNull;

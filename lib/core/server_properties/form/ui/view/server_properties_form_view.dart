@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/ui/auth_section.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/ui/view_model/auth_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/core/model/process_state.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/core/utility/selector.dart';
 
 class ServerPropertiesFormView extends StatefulWidget {
   final ServerPropertiesFormViewModel viewModel;
+  final AuthViewModel? authViewModel;
 
-  const ServerPropertiesFormView({super.key, required this.viewModel});
+  const ServerPropertiesFormView({
+    super.key,
+    required this.viewModel,
+    this.authViewModel,
+  });
 
   @override
   State<ServerPropertiesFormView> createState() =>
@@ -98,38 +105,33 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
           ),
           Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
           TextFormField(
-            controller: widget.viewModel.username,
-            onFieldSubmitted: _handleSubmitByEnter,
-            decoration: InputDecoration(
-              labelText: "Username",
+            controller: widget.viewModel.keycloakBaseUrl,
+            decoration: const InputDecoration(
+              labelText: "Keycloak Base URL",
               border: OutlineInputBorder(),
-              hintText: "Example: admin",
+              hintText: "Example: https://id.example.com (no trailing /)",
               floatingLabelBehavior: FloatingLabelBehavior.always,
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return "Please enter some text";
-              }
-              return null;
-            },
           ),
           Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
           TextFormField(
-            controller: widget.viewModel.password,
-            onFieldSubmitted: _handleSubmitByEnter,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: "Password",
+            controller: widget.viewModel.keycloakRealm,
+            decoration: const InputDecoration(
+              labelText: "Keycloak Realm",
               border: OutlineInputBorder(),
-              hintText: "Example: admin",
+              hintText: "Example: master",
               floatingLabelBehavior: FloatingLabelBehavior.always,
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return "Please enter some text";
-              }
-              return null;
-            },
+          ),
+          Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
+          TextFormField(
+            controller: widget.viewModel.keycloakClientId,
+            decoration: const InputDecoration(
+              labelText: "Keycloak Client ID",
+              border: OutlineInputBorder(),
+              hintText: "Example: qms-desktop-client",
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+            ),
           ),
           Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
           SizedBox(
@@ -137,6 +139,10 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
             child: ElevatedButton(
                 onPressed: _handleButtonSubmit, child: Text("Submit")),
           ),
+          if (widget.authViewModel != null) ...[
+            Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
+            AuthSection(viewModel: widget.authViewModel!),
+          ],
         ],
       ),
     );
