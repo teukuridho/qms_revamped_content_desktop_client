@@ -52,8 +52,47 @@ class $MediaTable extends Media with TableInfo<$MediaTable, MediaData> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, remoteId, path, position];
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tagMeta = const VerificationMeta('tag');
+  @override
+  late final GeneratedColumn<String> tag = GeneratedColumn<String>(
+    'tag',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    remoteId,
+    path,
+    position,
+    contentType,
+    mimeType,
+    tag,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -93,6 +132,33 @@ class $MediaTable extends Media with TableInfo<$MediaTable, MediaData> {
     } else if (isInserting) {
       context.missing(_positionMeta);
     }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mimeTypeMeta);
+    }
+    if (data.containsKey('tag')) {
+      context.handle(
+        _tagMeta,
+        tag.isAcceptableOrUnknown(data['tag']!, _tagMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tagMeta);
+    }
     return context;
   }
 
@@ -118,6 +184,18 @@ class $MediaTable extends Media with TableInfo<$MediaTable, MediaData> {
         DriftSqlType.int,
         data['${effectivePrefix}position'],
       )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      )!,
+      tag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag'],
+      )!,
     );
   }
 
@@ -132,11 +210,17 @@ class MediaData extends DataClass implements Insertable<MediaData> {
   final int remoteId;
   final String path;
   final int position;
+  final String contentType;
+  final String mimeType;
+  final String tag;
   const MediaData({
     required this.id,
     required this.remoteId,
     required this.path,
     required this.position,
+    required this.contentType,
+    required this.mimeType,
+    required this.tag,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -145,6 +229,9 @@ class MediaData extends DataClass implements Insertable<MediaData> {
     map['remote_id'] = Variable<int>(remoteId);
     map['path'] = Variable<String>(path);
     map['position'] = Variable<int>(position);
+    map['content_type'] = Variable<String>(contentType);
+    map['mime_type'] = Variable<String>(mimeType);
+    map['tag'] = Variable<String>(tag);
     return map;
   }
 
@@ -154,6 +241,9 @@ class MediaData extends DataClass implements Insertable<MediaData> {
       remoteId: Value(remoteId),
       path: Value(path),
       position: Value(position),
+      contentType: Value(contentType),
+      mimeType: Value(mimeType),
+      tag: Value(tag),
     );
   }
 
@@ -167,6 +257,9 @@ class MediaData extends DataClass implements Insertable<MediaData> {
       remoteId: serializer.fromJson<int>(json['remoteId']),
       path: serializer.fromJson<String>(json['path']),
       position: serializer.fromJson<int>(json['position']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      mimeType: serializer.fromJson<String>(json['mimeType']),
+      tag: serializer.fromJson<String>(json['tag']),
     );
   }
   @override
@@ -177,22 +270,40 @@ class MediaData extends DataClass implements Insertable<MediaData> {
       'remoteId': serializer.toJson<int>(remoteId),
       'path': serializer.toJson<String>(path),
       'position': serializer.toJson<int>(position),
+      'contentType': serializer.toJson<String>(contentType),
+      'mimeType': serializer.toJson<String>(mimeType),
+      'tag': serializer.toJson<String>(tag),
     };
   }
 
-  MediaData copyWith({int? id, int? remoteId, String? path, int? position}) =>
-      MediaData(
-        id: id ?? this.id,
-        remoteId: remoteId ?? this.remoteId,
-        path: path ?? this.path,
-        position: position ?? this.position,
-      );
+  MediaData copyWith({
+    int? id,
+    int? remoteId,
+    String? path,
+    int? position,
+    String? contentType,
+    String? mimeType,
+    String? tag,
+  }) => MediaData(
+    id: id ?? this.id,
+    remoteId: remoteId ?? this.remoteId,
+    path: path ?? this.path,
+    position: position ?? this.position,
+    contentType: contentType ?? this.contentType,
+    mimeType: mimeType ?? this.mimeType,
+    tag: tag ?? this.tag,
+  );
   MediaData copyWithCompanion(MediaCompanion data) {
     return MediaData(
       id: data.id.present ? data.id.value : this.id,
       remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
       path: data.path.present ? data.path.value : this.path,
       position: data.position.present ? data.position.value : this.position,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      tag: data.tag.present ? data.tag.value : this.tag,
     );
   }
 
@@ -202,13 +313,17 @@ class MediaData extends DataClass implements Insertable<MediaData> {
           ..write('id: $id, ')
           ..write('remoteId: $remoteId, ')
           ..write('path: $path, ')
-          ..write('position: $position')
+          ..write('position: $position, ')
+          ..write('contentType: $contentType, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('tag: $tag')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, remoteId, path, position);
+  int get hashCode =>
+      Object.hash(id, remoteId, path, position, contentType, mimeType, tag);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -216,7 +331,10 @@ class MediaData extends DataClass implements Insertable<MediaData> {
           other.id == this.id &&
           other.remoteId == this.remoteId &&
           other.path == this.path &&
-          other.position == this.position);
+          other.position == this.position &&
+          other.contentType == this.contentType &&
+          other.mimeType == this.mimeType &&
+          other.tag == this.tag);
 }
 
 class MediaCompanion extends UpdateCompanion<MediaData> {
@@ -224,31 +342,49 @@ class MediaCompanion extends UpdateCompanion<MediaData> {
   final Value<int> remoteId;
   final Value<String> path;
   final Value<int> position;
+  final Value<String> contentType;
+  final Value<String> mimeType;
+  final Value<String> tag;
   const MediaCompanion({
     this.id = const Value.absent(),
     this.remoteId = const Value.absent(),
     this.path = const Value.absent(),
     this.position = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.tag = const Value.absent(),
   });
   MediaCompanion.insert({
     this.id = const Value.absent(),
     required int remoteId,
     required String path,
     required int position,
+    required String contentType,
+    required String mimeType,
+    required String tag,
   }) : remoteId = Value(remoteId),
        path = Value(path),
-       position = Value(position);
+       position = Value(position),
+       contentType = Value(contentType),
+       mimeType = Value(mimeType),
+       tag = Value(tag);
   static Insertable<MediaData> custom({
     Expression<int>? id,
     Expression<int>? remoteId,
     Expression<String>? path,
     Expression<int>? position,
+    Expression<String>? contentType,
+    Expression<String>? mimeType,
+    Expression<String>? tag,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (remoteId != null) 'remote_id': remoteId,
       if (path != null) 'path': path,
       if (position != null) 'position': position,
+      if (contentType != null) 'content_type': contentType,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (tag != null) 'tag': tag,
     });
   }
 
@@ -257,12 +393,18 @@ class MediaCompanion extends UpdateCompanion<MediaData> {
     Value<int>? remoteId,
     Value<String>? path,
     Value<int>? position,
+    Value<String>? contentType,
+    Value<String>? mimeType,
+    Value<String>? tag,
   }) {
     return MediaCompanion(
       id: id ?? this.id,
       remoteId: remoteId ?? this.remoteId,
       path: path ?? this.path,
       position: position ?? this.position,
+      contentType: contentType ?? this.contentType,
+      mimeType: mimeType ?? this.mimeType,
+      tag: tag ?? this.tag,
     );
   }
 
@@ -281,6 +423,15 @@ class MediaCompanion extends UpdateCompanion<MediaData> {
     if (position.present) {
       map['position'] = Variable<int>(position.value);
     }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (tag.present) {
+      map['tag'] = Variable<String>(tag.value);
+    }
     return map;
   }
 
@@ -290,7 +441,10 @@ class MediaCompanion extends UpdateCompanion<MediaData> {
           ..write('id: $id, ')
           ..write('remoteId: $remoteId, ')
           ..write('path: $path, ')
-          ..write('position: $position')
+          ..write('position: $position, ')
+          ..write('contentType: $contentType, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('tag: $tag')
           ..write(')'))
         .toString();
   }
@@ -724,6 +878,9 @@ typedef $$MediaTableCreateCompanionBuilder =
       required int remoteId,
       required String path,
       required int position,
+      required String contentType,
+      required String mimeType,
+      required String tag,
     });
 typedef $$MediaTableUpdateCompanionBuilder =
     MediaCompanion Function({
@@ -731,6 +888,9 @@ typedef $$MediaTableUpdateCompanionBuilder =
       Value<int> remoteId,
       Value<String> path,
       Value<int> position,
+      Value<String> contentType,
+      Value<String> mimeType,
+      Value<String> tag,
     });
 
 class $$MediaTableFilterComposer extends Composer<_$AppDatabase, $MediaTable> {
@@ -758,6 +918,21 @@ class $$MediaTableFilterComposer extends Composer<_$AppDatabase, $MediaTable> {
 
   ColumnFilters<int> get position => $composableBuilder(
     column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tag => $composableBuilder(
+    column: $table.tag,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -790,6 +965,21 @@ class $$MediaTableOrderingComposer
     column: $table.position,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tag => $composableBuilder(
+    column: $table.tag,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MediaTableAnnotationComposer
@@ -812,6 +1002,17 @@ class $$MediaTableAnnotationComposer
 
   GeneratedColumn<int> get position =>
       $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<String> get tag =>
+      $composableBuilder(column: $table.tag, builder: (column) => column);
 }
 
 class $$MediaTableTableManager
@@ -846,11 +1047,17 @@ class $$MediaTableTableManager
                 Value<int> remoteId = const Value.absent(),
                 Value<String> path = const Value.absent(),
                 Value<int> position = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<String> mimeType = const Value.absent(),
+                Value<String> tag = const Value.absent(),
               }) => MediaCompanion(
                 id: id,
                 remoteId: remoteId,
                 path: path,
                 position: position,
+                contentType: contentType,
+                mimeType: mimeType,
+                tag: tag,
               ),
           createCompanionCallback:
               ({
@@ -858,11 +1065,17 @@ class $$MediaTableTableManager
                 required int remoteId,
                 required String path,
                 required int position,
+                required String contentType,
+                required String mimeType,
+                required String tag,
               }) => MediaCompanion.insert(
                 id: id,
                 remoteId: remoteId,
                 path: path,
                 position: position,
+                contentType: contentType,
+                mimeType: mimeType,
+                tag: tag,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
