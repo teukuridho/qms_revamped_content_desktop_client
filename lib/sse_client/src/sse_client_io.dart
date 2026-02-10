@@ -43,7 +43,10 @@ class SseClient implements SseClientBase {
     if (_starting || isRunning) return;
     _starting = true;
     try {
-      _lastEventId ??= (options.initialLastEventId?.isEmpty ?? true) ? null : options.initialLastEventId;
+      _log(SseClientLogLevel.info, 'start(url=${options.url})');
+      _lastEventId ??= (options.initialLastEventId?.isEmpty ?? true)
+          ? null
+          : options.initialLastEventId;
       await _connectOnce();
       _reconnectAttempts = 0;
     } finally {
@@ -55,6 +58,10 @@ class SseClient implements SseClientBase {
     _httpClient ??= HttpClient();
 
     final uri = options.url;
+    _log(
+      SseClientLogLevel.info,
+      'connect(url=$uri lastEventId=${_lastEventId ?? "<none>"})',
+    );
     final req = await _httpClient!.openUrl('GET', uri);
     _activeRequest = req;
 
@@ -84,7 +91,9 @@ class SseClient implements SseClientBase {
         final existing = req.headers.value(HttpHeaders.cookieHeader);
         req.headers.set(
           HttpHeaders.cookieHeader,
-          existing == null || existing.isEmpty ? cookieHeader : '$existing; $cookieHeader',
+          existing == null || existing.isEmpty
+              ? cookieHeader
+              : '$existing; $cookieHeader',
         );
       }
     }
@@ -97,11 +106,17 @@ class SseClient implements SseClientBase {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       final body = await utf8.decodeStream(res).catchError((_) => '');
+      _log(
+        SseClientLogLevel.error,
+        'connect failed: ${res.statusCode} ${res.reasonPhrase}${body.isEmpty ? '' : ' - ${_truncate(body)}'}',
+      );
       throw HttpException(
         'SSE connect failed: ${res.statusCode} ${res.reasonPhrase}${body.isEmpty ? '' : ' - $body'}',
         uri: uri,
       );
     }
+
+    _log(SseClientLogLevel.info, 'connected(status=${res.statusCode})');
 
     // Listen to response stream.
     final connectionId = ++_connectionId;
@@ -111,7 +126,11 @@ class SseClient implements SseClientBase {
         _handleDisconnect(e, st, connectionId);
       },
       onDone: () {
-        _handleDisconnect(const SocketException('SSE stream closed'), StackTrace.current, connectionId);
+        _handleDisconnect(
+          const SocketException('SSE stream closed'),
+          StackTrace.current,
+          connectionId,
+        );
       },
       cancelOnError: true,
     );
@@ -130,7 +149,9 @@ class SseClient implements SseClientBase {
 
           // Refresh on mismatch (but do not continue/forward invalid frames).
           // Only refresh after the validator has been initialized with a numeric id.
-          if (options.shouldRefreshWhenIdMismatch && wasInitialized && !_refreshing) {
+          if (options.shouldRefreshWhenIdMismatch &&
+              wasInitialized &&
+              !_refreshing) {
             _refreshing = true;
             // ignore: discarded_futures
             scheduleMicrotask(() async {
@@ -156,6 +177,8 @@ class SseClient implements SseClientBase {
 
   Future<void> _refreshConnection() async {
     if (_closed) return;
+
+    _log(SseClientLogLevel.warn, 'refreshConnection()');
 
     // Invalidate callbacks from the old stream.
     _connectionId += 1;
@@ -184,6 +207,12 @@ class SseClient implements SseClientBase {
     try {
       cb(mismatch);
     } catch (e, st) {
+      _log(
+        SseClientLogLevel.error,
+        'mismatch callback threw',
+        error: e,
+        stackTrace: st,
+      );
       // Never let user callback crash the SSE loop.
       _framesController.addError(e, st);
     }
@@ -201,18 +230,36 @@ class SseClient implements SseClientBase {
     if (_closed) return;
 
     if (!options.autoReconnect) {
+      _log(
+        SseClientLogLevel.error,
+        'disconnected (autoReconnect=false)',
+        error: error,
+        stackTrace: st,
+      );
       _framesController.addError(error, st);
       return;
     }
 
     final max = options.maxReconnectAttempts;
     if (max != null && _reconnectAttempts >= max) {
+      _log(
+        SseClientLogLevel.error,
+        'disconnected (maxReconnectAttempts reached: $max)',
+        error: error,
+        stackTrace: st,
+      );
       _framesController.addError(error, st);
       return;
     }
 
     _reconnectAttempts += 1;
     final delay = options.reconnectDelay;
+    _log(
+      SseClientLogLevel.warn,
+      'disconnected; scheduling reconnect attempt $_reconnectAttempts in ${delay.inMilliseconds}ms',
+      error: error,
+      stackTrace: st,
+    );
     Timer(delay, () async {
       if (_closed) return;
       try {
@@ -268,6 +315,7 @@ class SseClient implements SseClientBase {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _log(SseClientLogLevel.info, 'close()');
     _connectionId += 1;
 
     _activeRequest?.abort();
@@ -285,5 +333,25 @@ class SseClient implements SseClientBase {
     }
 
     await _framesController.close();
+  }
+
+  void _log(
+    SseClientLogLevel level,
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    final logger = options.logger;
+    if (logger == null) return;
+    try {
+      logger(level, message, error: error, stackTrace: stackTrace);
+    } catch (_) {
+      // Never crash due to logger.
+    }
+  }
+
+  static String _truncate(String s, {int max = 300}) {
+    if (s.length <= max) return s;
+    return '${s.substring(0, max)}...';
   }
 }

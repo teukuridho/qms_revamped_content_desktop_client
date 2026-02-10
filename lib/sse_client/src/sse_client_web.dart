@@ -32,32 +32,41 @@ class SseClient implements SseClientBase {
     }
     if (isRunning) return;
 
+    _log(SseClientLogLevel.info, 'start(url=${options.url})');
+
     // Browser EventSource does not allow setting custom headers.
     // Cookies may be sent depending on CORS + credentials policy of the browser.
     final es = html.EventSource(options.url.toString());
     _eventSource = es;
 
-    _subscriptions.add(es.onOpen.listen((_) {
-      // no-op
-    }));
+    _subscriptions.add(
+      es.onOpen.listen((_) {
+        _log(SseClientLogLevel.info, 'connected(onOpen)');
+      }),
+    );
 
-    _subscriptions.add(es.onError.listen((e) {
-      if (_closed) return;
-      _framesController.addError(StateError('EventSource error: $e'));
-      if (!options.autoReconnect) return;
-      // Native EventSource already retries based on server `retry:` hint.
-    }));
+    _subscriptions.add(
+      es.onError.listen((e) {
+        if (_closed) return;
+        _log(SseClientLogLevel.error, 'EventSource error', error: e);
+        _framesController.addError(StateError('EventSource error: $e'));
+        if (!options.autoReconnect) return;
+        // Native EventSource already retries based on server `retry:` hint.
+      }),
+    );
 
     // Default "message" events.
-    _subscriptions.add(es.onMessage.listen((html.MessageEvent e) {
-      final data = e.data?.toString() ?? '';
-      _framesController.add(
-        SseFrame.fromFields({
-          'event': const ['message'],
-          'data': [data],
-        }),
-      );
-    }));
+    _subscriptions.add(
+      es.onMessage.listen((html.MessageEvent e) {
+        final data = e.data?.toString() ?? '';
+        _framesController.add(
+          SseFrame.fromFields({
+            'event': const ['message'],
+            'data': [data],
+          }),
+        );
+      }),
+    );
   }
 
   @override
@@ -118,6 +127,7 @@ class SseClient implements SseClientBase {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _log(SseClientLogLevel.info, 'close()');
 
     for (final s in _subscriptions) {
       await s.cancel();
@@ -128,5 +138,20 @@ class SseClient implements SseClientBase {
     _eventSource = null;
 
     await _framesController.close();
+  }
+
+  void _log(
+    SseClientLogLevel level,
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    final logger = options.logger;
+    if (logger == null) return;
+    try {
+      logger(level, message, error: error, stackTrace: stackTrace);
+    } catch (_) {
+      // Never crash due to logger.
+    }
   }
 }

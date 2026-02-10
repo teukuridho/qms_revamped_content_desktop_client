@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
+
 class LoopbackCanceledException implements Exception {
   final String message;
   const LoopbackCanceledException([this.message = 'Loopback login canceled']);
@@ -10,12 +12,15 @@ class LoopbackCanceledException implements Exception {
 }
 
 class LoopbackServer {
+  static final AppLog _log = AppLog('oidc.loopback');
+
   HttpServer? _server;
   final Completer<Uri> _redirectCompleter = Completer<Uri>();
 
   Future<void> start() async {
     if (_server != null) return;
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    _log.i('Started loopback server on 127.0.0.1:${_server!.port}');
 
     _server!.listen((req) async {
       // Build an absolute URL so callers can inspect it uniformly.
@@ -31,10 +36,12 @@ class LoopbackServer {
       // We treat any request with OAuth query parameters as a callback. This
       // avoids relying on a fixed callback path, which improves compatibility
       // with IdP redirect URI validation rules.
-      final isCallback = qp.containsKey('code') ||
+      final isCallback =
+          qp.containsKey('code') ||
           qp.containsKey('error') ||
           qp.containsKey('state');
       if (isCallback && !_redirectCompleter.isCompleted) {
+        _log.i('Received OIDC callback');
         _redirectCompleter.complete(url);
       }
 
@@ -68,6 +75,7 @@ class LoopbackServer {
   }
 
   Future<void> cancel([String message = 'Canceled by user']) async {
+    _log.w('Cancel: $message');
     if (!_redirectCompleter.isCompleted) {
       _redirectCompleter.completeError(LoopbackCanceledException(message));
     }
@@ -78,6 +86,7 @@ class LoopbackServer {
     final server = _server;
     _server = null;
     if (server != null) {
+      _log.i('Closing loopback server');
       await server.close(force: true);
     }
   }

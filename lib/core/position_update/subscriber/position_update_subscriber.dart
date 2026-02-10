@@ -38,9 +38,10 @@ class PositionUpdateSubscriber {
     required EventManager eventManager,
     required ServerPropertiesRegistryService serverPropertiesRegistryService,
     SseClientFactory? sseClientFactory,
-  })  : _eventManager = eventManager,
-        _serverPropertiesRegistryService = serverPropertiesRegistryService,
-        _sseClientFactory = sseClientFactory ?? ((options) => SseClient(options));
+  }) : _eventManager = eventManager,
+       _serverPropertiesRegistryService = serverPropertiesRegistryService,
+       _sseClientFactory =
+           sseClientFactory ?? ((options) => SseClient(options));
 
   void init() {
     if (_disposed) {
@@ -48,15 +49,15 @@ class PositionUpdateSubscriber {
     }
 
     _authSub ??= _eventManager.listen<AuthLoggedInEvent>().listen(
-          _onAuthLoggedInEvent,
-          onError: (Object e, StackTrace st) {
-            PositionUpdateSubscriberLogger.error(
-              'Auth listener error (serviceName=$serviceName tag=$tag)',
-              error: e,
-              stackTrace: st,
-            );
-          },
+      _onAuthLoggedInEvent,
+      onError: (Object e, StackTrace st) {
+        PositionUpdateSubscriberLogger.error(
+          'Auth listener error (serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
         );
+      },
+    );
   }
 
   void _onAuthLoggedInEvent(AuthLoggedInEvent event) {
@@ -110,7 +111,9 @@ class PositionUpdateSubscriber {
       serviceName: serviceName,
     );
     if (sp == null) {
-      throw StateError('Missing server properties for serviceName=$serviceName');
+      throw StateError(
+        'Missing server properties for serviceName=$serviceName',
+      );
     }
 
     final serverAddress = sp.serverAddress.trim();
@@ -135,8 +138,27 @@ class PositionUpdateSubscriber {
     final client = _sseClientFactory(
       SseClientOptions(
         url: subscribeUri,
-        headers: {
-          'Authorization': 'Bearer $token',
+        headers: {'Authorization': 'Bearer $token'},
+        logger: (level, message, {error, stackTrace}) {
+          final prefix = 'SSE(serviceName=$serviceName tag=$tag)';
+          switch (level) {
+            case SseClientLogLevel.debug:
+              PositionUpdateSubscriberLogger.debug('$prefix $message');
+              break;
+            case SseClientLogLevel.info:
+              PositionUpdateSubscriberLogger.info('$prefix $message');
+              break;
+            case SseClientLogLevel.warn:
+              PositionUpdateSubscriberLogger.warn('$prefix $message');
+              break;
+            case SseClientLogLevel.error:
+              PositionUpdateSubscriberLogger.error(
+                '$prefix $message',
+                error: error,
+                stackTrace: stackTrace,
+              );
+              break;
+          }
         },
         enableSseIncrementalIdMismatch: true,
         shouldRefreshWhenIdMismatch: true,
@@ -198,10 +220,7 @@ class PositionUpdateSubscriber {
 
     return baseUri.replace(
       pathSegments: segments,
-      queryParameters: <String, String>{
-        'tableName': serviceName,
-        'tag': tag,
-      },
+      queryParameters: <String, String>{'tableName': serviceName, 'tag': tag},
     );
   }
 

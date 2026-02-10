@@ -73,7 +73,7 @@ class OidcAuthService {
         AuthLogger.info('Auth[$_serviceName]: device polling success; tokens saved');
         return;
       } on OidcOAuthException catch (e) {
-        AuthLogger.info('Auth[$_serviceName]: device polling oauth error=${e.error}');
+        AuthLogger.debug('Auth[$_serviceName]: device polling oauth error=${e.error}');
         switch (e.error) {
           case 'authorization_pending':
             await Future<void>.delayed(Duration(seconds: intervalSeconds));
@@ -189,7 +189,7 @@ class OidcAuthService {
   }
 
   Future<String?> getValidAccessToken({Duration refreshSkew = const Duration(seconds: 30)}) async {
-    AuthLogger.info('Auth[$_serviceName]: getValidAccessToken');
+    AuthLogger.debug('Auth[$_serviceName]: getValidAccessToken');
     final sp = await _loadServerPropertiesOrNull();
     if (sp == null) return null;
 

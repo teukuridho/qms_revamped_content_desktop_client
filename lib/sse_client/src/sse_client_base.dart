@@ -4,6 +4,16 @@ import 'sse_frame.dart';
 import 'sse_incremental_id.dart';
 import 'sse_value_parser.dart';
 
+enum SseClientLogLevel { debug, info, warn, error }
+
+typedef SseClientLogger =
+    void Function(
+      SseClientLogLevel level,
+      String message, {
+      Object? error,
+      StackTrace? stackTrace,
+    });
+
 class SseClientOptions {
   final Uri url;
 
@@ -47,6 +57,9 @@ class SseClientOptions {
   /// Called when incremental-id mismatch is detected (IO only).
   final SseIncrementalMismatchCallback? sseIncrementalMismatchCallback;
 
+  /// Optional logger hook (kept dependency-free).
+  final SseClientLogger? logger;
+
   /// If true, refreshes (disconnect + reconnect) the SSE connection when an incremental-id mismatch occurs (IO only).
   ///
   /// Note: If the first frame is missing a numeric `id:`, the client still closes immediately ("don't continue").
@@ -65,6 +78,7 @@ class SseClientOptions {
     this.lastEventIdHeaderName = 'Last-Event-ID',
     this.enableSseIncrementalIdMismatch = false,
     this.sseIncrementalMismatchCallback,
+    this.logger,
     this.shouldRefreshWhenIdMismatch = false,
   });
 }
@@ -99,15 +113,17 @@ abstract class SseClientBase {
 }
 
 extension SseClientConvenience on SseClientBase {
-  Stream<String> listenString(
-    String fieldKey, {
-    bool distinct = false,
-  }) =>
-      listen<String>(fieldKey, parser: const SseStringParser(), distinct: distinct);
+  Stream<String> listenString(String fieldKey, {bool distinct = false}) =>
+      listen<String>(
+        fieldKey,
+        parser: const SseStringParser(),
+        distinct: distinct,
+      );
 
-  Stream<Object?> listenJson(
-    String fieldKey, {
-    bool distinct = false,
-  }) =>
-      listen<Object?>(fieldKey, parser: const SseJsonParser(), distinct: distinct);
+  Stream<Object?> listenJson(String fieldKey, {bool distinct = false}) =>
+      listen<Object?>(
+        fieldKey,
+        parser: const SseJsonParser(),
+        distinct: distinct,
+      );
 }

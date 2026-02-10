@@ -6,54 +6,65 @@ import 'package:qms_revamped_content_desktop_client/core/event_manager/event_man
 import 'package:qms_revamped_content_desktop_client/core/init/screen/init_screen.dart';
 import 'package:qms_revamped_content_desktop_client/core/init/service/init_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/init/view_model/init_view_model.dart';
+import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
+import 'package:qms_revamped_content_desktop_client/core/logging/logging_bootstrap.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
 
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        // Event manager
-        Provider(create: (context) => EventManager()),
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await LoggingBootstrap.init();
 
-        // App directory
-        Provider(create: (context) => AppDirectoryService()),
+  final log = AppLog.root.child('main');
+  log.i('App starting');
 
-        // App Database
-        Provider(
-          create: (context) =>
-              AppDatabaseManager(appDirectoryService: context.read()),
-        ),
+  LoggingBootstrap.runZoned<void>(() {
+    runApp(
+      MultiProvider(
+        providers: [
+          // Event manager
+          Provider(create: (context) => EventManager()),
 
-        // Init
-        Provider(
-          create: (context) => InitService(
-            eventManager: context.read(),
-            appDirectoryService: context.read(),
-            appDatabaseManager: context.read(),
+          // App directory
+          Provider(create: (context) => AppDirectoryService()),
+
+          // App Database
+          Provider(
+            create: (context) =>
+                AppDatabaseManager(appDirectoryService: context.read()),
           ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => InitViewModel(initService: context.read()),
-        ),
 
-        // Server properties
-        Provider(
-          create: (context) => ServerPropertiesRegistryService(
-            appDatabaseManager: context.read(),
-            eventManager: context.read(),
+          // Init
+          Provider(
+            create: (context) => InitService(
+              eventManager: context.read(),
+              appDirectoryService: context.read(),
+              appDatabaseManager: context.read(),
+            ),
           ),
-        ),
+          ChangeNotifierProvider(
+            create: (context) => InitViewModel(initService: context.read()),
+          ),
 
-        // Media (main)
-        Provider(
-          create: (context) =>
-              MediaStorageDirectoryService(appDirectoryService: context.read()),
-        ),
-      ],
-      child: const MyAppTwo(),
-    ),
-  );
+          // Server properties
+          Provider(
+            create: (context) => ServerPropertiesRegistryService(
+              appDatabaseManager: context.read(),
+              eventManager: context.read(),
+            ),
+          ),
+
+          // Media (main)
+          Provider(
+            create: (context) => MediaStorageDirectoryService(
+              appDirectoryService: context.read(),
+            ),
+          ),
+        ],
+        child: const MyAppTwo(),
+      ),
+    );
+  });
 }
 
 class MyAppTwo extends StatefulWidget {

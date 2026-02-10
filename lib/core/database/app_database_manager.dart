@@ -4,11 +4,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
+import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:drift/drift.dart';
 
 class AppDatabaseManager {
+  static final AppLog _log = AppLog('db');
+
   late final AppDirectoryService _appDirectoryService;
   late final AppDatabase _appDatabase;
 
@@ -19,6 +22,7 @@ class AppDatabaseManager {
   AppDatabase get appDatabase => _appDatabase;
 
   Future init() async {
+    _log.i('Initializing database');
     _appDatabase = AppDatabase(_openConnection());
   }
 
@@ -26,6 +30,7 @@ class AppDatabaseManager {
     return LazyDatabase(() async {
       final dbDirectory = _appDirectoryService.appDirectory;
       final file = File(p.join(dbDirectory.path, 'db.sqlite'));
+      _log.i('Opening sqlite database: ${file.path}');
 
       // Also work around limitations on old Android versions
       if (Platform.isAndroid) {

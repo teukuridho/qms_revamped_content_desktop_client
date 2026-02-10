@@ -2,8 +2,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
+import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 
 class InitService {
+  static final AppLog _log = AppLog('init');
+
   late final AppDirectoryService _appDirectoryService;
   late final AppDatabaseManager _appDatabaseManager;
   late final EventManager _eventManager;
@@ -11,7 +14,7 @@ class InitService {
   InitService({
     required AppDirectoryService appDirectoryService,
     required AppDatabaseManager appDatabaseManager,
-    required EventManager eventManager
+    required EventManager eventManager,
   }) {
     _appDirectoryService = appDirectoryService;
     _appDatabaseManager = appDatabaseManager;
@@ -36,12 +39,17 @@ class InitService {
 
     for (var process in initProcesses) {
       yield "Initializing ${process.name}";
+      final sw = Stopwatch()..start();
+      _log.i('Init step start: ${process.name}');
       try {
         await process.func();
-      }
-      catch(ex) {
+      } catch (ex, st) {
+        _log.e('Init step failed: ${process.name}', error: ex, stackTrace: st);
         yield "Exception on ${process.name}: ${ex.toString()}";
         rethrow;
+      } finally {
+        sw.stop();
+        _log.i('Init step done: ${process.name} (${sw.elapsedMilliseconds}ms)');
       }
     }
   }

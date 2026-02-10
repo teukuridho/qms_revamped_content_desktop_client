@@ -64,10 +64,7 @@ class KeycloakOidcClient {
     AuthLogger.info('OIDC: Starting device authorization');
     final res = await _postForm(
       endpoints.deviceAuthorizationEndpoint,
-      body: {
-        'client_id': config.clientId,
-        'scope': scope,
-      },
+      body: {'client_id': config.clientId, 'scope': scope},
     );
 
     final json = _parseJsonResponse(res);
@@ -79,7 +76,8 @@ class KeycloakOidcClient {
       deviceCode: (json['device_code'] as String?) ?? '',
       userCode: (json['user_code'] as String?) ?? '',
       verificationUri: (json['verification_uri'] as String?) ?? '',
-      verificationUriComplete: (json['verification_uri_complete'] as String?) ?? '',
+      verificationUriComplete:
+          (json['verification_uri_complete'] as String?) ?? '',
       expiresIn: (json['expires_in'] as num?)?.toInt() ?? 0,
       interval: (json['interval'] as num?)?.toInt() ?? 5,
     );
@@ -101,7 +99,10 @@ class KeycloakOidcClient {
     return _parseTokenResponse(res);
   }
 
-  Future<http.Response> _postForm(Uri url, {required Map<String, String> body}) async {
+  Future<http.Response> _postForm(
+    Uri url, {
+    required Map<String, String> body,
+  }) async {
     try {
       final res = await _http
           .post(
@@ -110,10 +111,14 @@ class KeycloakOidcClient {
             body: body,
           )
           .timeout(requestTimeout);
-      AuthLogger.info('OIDC: POST ${url.path} -> ${res.statusCode}');
+      AuthLogger.debug('OIDC: POST ${url.path} -> ${res.statusCode}');
       return res;
     } on TimeoutException catch (e, st) {
-      AuthLogger.error('OIDC: Request timed out: $url', error: e, stackTrace: st);
+      AuthLogger.error(
+        'OIDC: Request timed out: $url',
+        error: e,
+        stackTrace: st,
+      );
       throw const OidcProtocolException('Network timeout talking to Keycloak');
     } catch (e, st) {
       AuthLogger.error('OIDC: Network error: $url', error: e, stackTrace: st);
@@ -158,7 +163,9 @@ class KeycloakOidcClient {
 
   OidcOAuthException _parseOAuthError(Map<String, dynamic> json) {
     final error = (json['error'] as String?) ?? 'unknown_error';
-    final desc = (json['error_description'] as String?) ?? (json['errorDescription'] as String?);
+    final desc =
+        (json['error_description'] as String?) ??
+        (json['errorDescription'] as String?);
     return OidcOAuthException(error, errorDescription: desc);
   }
 

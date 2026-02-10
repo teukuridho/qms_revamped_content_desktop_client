@@ -1,22 +1,21 @@
-import 'dart:developer' as dev;
+import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 
 class AuthLogger {
-  static const String _name = 'auth';
+  static final AppLog _log = AppLog('auth');
+
+  static void debug(String message) {
+    _log.d(message);
+  }
 
   static void info(String message) {
-    dev.log(message, name: _name, level: 800);
+    _log.i(message);
   }
 
   static void warn(String message) {
-    dev.log(message, name: _name, level: 900);
+    _log.w(message);
   }
 
-  static void error(
-    String message, {
-    Object? error,
-    StackTrace? stackTrace,
-  }) {
-    dev.log(message, name: _name, level: 1000, error: error, stackTrace: stackTrace);
+  static void error(String message, {Object? error, StackTrace? stackTrace}) {
+    _log.e(message, error: error, stackTrace: stackTrace);
   }
 }
-
