@@ -38,7 +38,7 @@ Tokens must support **`offline_access`** (target retention ~10 years via realm s
 - `lib/core/server_properties/registry/service/server_properties_registry_service.dart` → add getters/setters for Keycloak config & tokens.
 - `lib/core/server_properties/form/ui/view_model/server_properties_form_view_model.dart` and `.../view/server_properties_form_view.dart` → add Keycloak fields + login actions UI.
 - `lib/core/database/app_database.dart` → bump schemaVersion + migration.
-- `drift_schemas/my_database/drift_schema_v*.json` → generate v7 schema.
+- `drift_schemas/my_database/drift_schema_v*.json` → generate v8 schema.
 
 ---
 
@@ -46,6 +46,7 @@ Tokens must support **`offline_access`** (target retention ~10 years via realm s
 For the client used by this desktop app (a new Keycloak client):
 
 - Type: **OpenID Connect**, **Public client**
+- Client authentication: **OFF** (no client secret)
 - Enable:
     - ✅ Standard Flow (for PKCE option)
     - ✅ OAuth 2.0 Device Authorization Grant (for QR option)
@@ -59,6 +60,10 @@ For the client used by this desktop app (a new Keycloak client):
       Keycloak treats this as a special-case loopback redirect and allows any port (native app pattern).
 - Add client scope:
     - `offline_access` (Default preferred)
+
+If Keycloak is hosted on another machine, ensure the desktop app uses a `keycloakBaseUrl`
+that is reachable from this computer (do not use `http://127.0.0.1` / `http://localhost` unless
+Keycloak runs on the same machine).
 
 Realm settings (for “~10 years” offline sessions):
 - Realm → Sessions:
@@ -76,6 +81,7 @@ Add to `lib/core/server_properties/registry/entity/server_properties.dart`:
 - `keycloakBaseUrl` (text)
 - `keycloakRealm` (text)
 - `keycloakClientId` (text)
+- `keycloakClientSecret` (text) (optional; should be empty for Public client)
 - `oidcAccessToken` (text)
 - `oidcRefreshToken` (text)
 - `oidcIdToken` (text) (optional; store empty if unused)
@@ -94,13 +100,15 @@ In `lib/core/database/app_database.dart`:
   - Add `from5To6` migration: add new Keycloak/OIDC columns to `server_properties` with safe defaults.
 - Bump `schemaVersion` from `6` → `7`:
   - Add `from6To7` migration: drop `username`, `password`, `cookie` from `server_properties`.
+- Bump `schemaVersion` from `7` → `8`:
+  - Add `from7To8` migration: add `keycloakClientSecret` to `server_properties` with default empty.
 
 After schema change:
 - Run build runner to regenerate:
     - `lib/core/database/app_database.g.dart`
     - `lib/core/database/app_database.steps.dart`
 - Generate a new drift schema snapshot:
-    - `drift_schemas/my_database/drift_schema_v7.json`
+    - `drift_schemas/my_database/drift_schema_v8.json`
 
 ---
 
@@ -109,7 +117,7 @@ Create folder: `lib/core/auth/oidc/`
 
 ### 1) Models
 Create `lib/core/auth/oidc/model/oidc_config.dart`:
-- `OidcConfig { baseUrl, realm, clientId }`
+- `OidcConfig { baseUrl, realm, clientId, clientSecret (optional) }`
 
 Create `lib/core/auth/oidc/model/token_set.dart`:
 - `OidcTokenSet { accessToken, refreshToken, idToken, expiresAt, scope, tokenType }`
@@ -363,6 +371,9 @@ Event wiring:
 - Always normalize Keycloak base URL (strip trailing `/`).
 - Use `127.0.0.1` loopback instead of `localhost` to avoid DNS issues.
 - In PKCE callback, validate `state`.
+- If you see `OidcOAuthException(unauthorized client, invalid client or invalid client credentials)`:
+  - The Keycloak client is usually confidential (client authentication ON) or misconfigured.
+  - This app is intended to use a Public client (client authentication OFF).
 - Timeouts:
     - PKCE wait-for-callback timeout (e.g., 3–5 minutes)
     - Device flow expires based on `expires_in`
@@ -373,5 +384,5 @@ Event wiring:
 ## Deliverables
 - Working login flows (Option 1 + Option 2) on Windows/Linux/macOS.
 - Token persistence per `serviceName`.
-- Updated drift schema (v7) and generated code.
+- Updated drift schema (v8) and generated code.
 - UI that supports configuring Keycloak settings and executing login flows.
