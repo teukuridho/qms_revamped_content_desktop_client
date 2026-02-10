@@ -47,6 +47,11 @@ class SseClientOptions {
   /// Called when incremental-id mismatch is detected (IO only).
   final SseIncrementalMismatchCallback? sseIncrementalMismatchCallback;
 
+  /// If true, refreshes (disconnect + reconnect) the SSE connection when an incremental-id mismatch occurs (IO only).
+  ///
+  /// Note: If the first frame is missing a numeric `id:`, the client still closes immediately ("don't continue").
+  final bool shouldRefreshWhenIdMismatch;
+
   const SseClientOptions({
     required this.url,
     this.headers = const {},
@@ -60,6 +65,7 @@ class SseClientOptions {
     this.lastEventIdHeaderName = 'Last-Event-ID',
     this.enableSseIncrementalIdMismatch = false,
     this.sseIncrementalMismatchCallback,
+    this.shouldRefreshWhenIdMismatch = false,
   });
 }
 

@@ -10,6 +10,11 @@ class SseParser {
   final StringBuffer _buf = StringBuffer();
   final Map<String, List<String>> _current = {};
 
+  void reset() {
+    _buf.clear();
+    _current.clear();
+  }
+
   List<SseFrame> add(String chunk) {
     _buf.write(chunk);
     final out = <SseFrame>[];
@@ -84,4 +89,3 @@ class SseParser {
     return frame;
   }
 }
-

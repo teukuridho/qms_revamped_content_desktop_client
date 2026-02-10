@@ -24,6 +24,8 @@ class SseClient implements SseClientBase {
   int _reconnectAttempts = 0;
   String? _lastEventId;
   final SseIncrementalIdValidator _incrementalId = SseIncrementalIdValidator();
+  int _connectionId = 0;
+  bool _refreshing = false;
 
   SseClient(this.options);
 
@@ -102,13 +104,14 @@ class SseClient implements SseClientBase {
     }
 
     // Listen to response stream.
+    final connectionId = ++_connectionId;
     _subscription = res.listen(
       _onBytes,
       onError: (Object e, StackTrace st) {
-        _handleDisconnect(e, st);
+        _handleDisconnect(e, st, connectionId);
       },
       onDone: () {
-        _handleDisconnect(const SocketException('SSE stream closed'), StackTrace.current);
+        _handleDisconnect(const SocketException('SSE stream closed'), StackTrace.current, connectionId);
       },
       cancelOnError: true,
     );
@@ -136,6 +139,21 @@ class SseClient implements SseClientBase {
           }
 
           _safeInvokeMismatchCallback(mismatch);
+
+          // Refresh on mismatch (but do not continue/forward invalid frames).
+          // First-frame missing/non-numeric id is still terminal per spec.
+          if (options.shouldRefreshWhenIdMismatch && wasInitialized && !_refreshing) {
+            _refreshing = true;
+            // ignore: discarded_futures
+            scheduleMicrotask(() async {
+              try {
+                await _refreshConnection();
+              } finally {
+                _refreshing = false;
+              }
+            });
+            return;
+          }
         }
       }
 
@@ -145,6 +163,30 @@ class SseClient implements SseClientBase {
         _lastEventId = id.isEmpty ? null : id;
       }
       _framesController.add(frame);
+    }
+  }
+
+  Future<void> _refreshConnection() async {
+    if (_closed) return;
+
+    // Invalidate callbacks from the old stream.
+    _connectionId += 1;
+
+    _activeRequest?.abort();
+    _activeRequest = null;
+
+    final sub = _subscription;
+    _subscription = null;
+    await sub?.cancel();
+
+    _parser.reset();
+    _incrementalId.reset();
+
+    try {
+      await _connectOnce();
+      _reconnectAttempts = 0;
+    } catch (e, st) {
+      _handleDisconnect(e, st, _connectionId);
     }
   }
 
@@ -159,7 +201,10 @@ class SseClient implements SseClientBase {
     }
   }
 
-  void _handleDisconnect(Object error, StackTrace st) {
+  void _handleDisconnect(Object error, StackTrace st, int connectionId) {
+    // Ignore callbacks from stale connections.
+    if (connectionId != _connectionId) return;
+
     _activeRequest = null;
     final sub = _subscription;
     _subscription = null;
@@ -187,7 +232,7 @@ class SseClient implements SseClientBase {
       } catch (e, st2) {
         // Propagate failures to listeners; future reconnects still apply.
         _framesController.addError(e, st2);
-        _handleDisconnect(e, st2);
+        _handleDisconnect(e, st2, _connectionId);
       }
     });
   }
@@ -235,6 +280,7 @@ class SseClient implements SseClientBase {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _connectionId += 1;
 
     _activeRequest?.abort();
     _activeRequest = null;

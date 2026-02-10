@@ -105,6 +105,8 @@ Semantics (IO client):
 - After that, each next frame is expected to have `id == previous + 1`. If not, the callback is invoked.
 - On mismatch where an unexpected numeric id is observed, the validator resyncs to that observed id and continues checking future increments.
 
+If `SseClientOptions.shouldRefreshWhenIdMismatch == true`, the IO client will immediately disconnect + reconnect on any mismatch after the first valid id (and it will not forward the mismatched frame to listeners).
+
 Web: this is not enforced (the web client uses `EventSource` and does not currently validate incremental ids).
 
 ## Reconnect

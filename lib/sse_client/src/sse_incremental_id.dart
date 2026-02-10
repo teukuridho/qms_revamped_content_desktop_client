@@ -36,6 +36,11 @@ class SseIncrementalIdValidator {
   bool get initialized => _initialized;
   int? get lastId => _lastId;
 
+  void reset() {
+    _lastId = null;
+    _initialized = false;
+  }
+
   /// Returns `null` when ok. Returns mismatch when invalid.
   ///
   /// When [requireFirstId] is true and the validator is not initialized yet,
