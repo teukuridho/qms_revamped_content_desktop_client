@@ -86,6 +86,27 @@ IO client supports standard SSE resume via `Last-Event-ID` header:
 
 On web, `EventSource` manages reconnection internally; custom headers (including `Last-Event-ID`) cannot be set manually.
 
+## sse_incremental_id_mismatch
+
+If your server uses numeric incremental `id:` (e.g. `id: 1`, `id: 2`, ...), you can enable mismatch detection:
+
+```dart
+final sse = SseClient(SseClientOptions(
+  url: Uri.parse('https://example.com/sse'),
+  enableSseIncrementalIdMismatch: true,
+  sseIncrementalMismatchCallback: (m) {
+    // m.expectedId, m.actualIdRaw, m.reason, m.frame
+  },
+));
+```
+
+Semantics (IO client):
+- First received frame MUST include a numeric `id:`; otherwise the client reports an error and closes ("don’t continue").
+- After that, each next frame is expected to have `id == previous + 1`. If not, the callback is invoked.
+- On mismatch where an unexpected numeric id is observed, the validator resyncs to that observed id and continues checking future increments.
+
+Web: this is not enforced (the web client uses `EventSource` and does not currently validate incremental ids).
+
 ## Reconnect
 
 `SseClientOptions.autoReconnect` retries when the TCP stream closes or errors.

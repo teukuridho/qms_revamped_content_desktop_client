@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'sse_frame.dart';
+import 'sse_incremental_id.dart';
 import 'sse_value_parser.dart';
 
 class SseClientOptions {
@@ -36,6 +37,16 @@ class SseClientOptions {
   /// Header name used for last event id (IO only).
   final String lastEventIdHeaderName;
 
+  /// Enable mismatch detection when server uses incremental numeric `id:` (IO only).
+  ///
+  /// Semantics:
+  /// - First received frame must include `id:` and it must be numeric; otherwise the client closes and reports an error.
+  /// - Next frames are expected to have `id == previous + 1`. If not, [sseIncrementalMismatchCallback] is invoked.
+  final bool enableSseIncrementalIdMismatch;
+
+  /// Called when incremental-id mismatch is detected (IO only).
+  final SseIncrementalMismatchCallback? sseIncrementalMismatchCallback;
+
   const SseClientOptions({
     required this.url,
     this.headers = const {},
@@ -47,6 +58,8 @@ class SseClientOptions {
     this.initialLastEventId,
     this.sendLastEventIdHeader = true,
     this.lastEventIdHeaderName = 'Last-Event-ID',
+    this.enableSseIncrementalIdMismatch = false,
+    this.sseIncrementalMismatchCallback,
   });
 }
 

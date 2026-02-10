@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'sse_client_base.dart';
 import 'sse_frame.dart';
+import 'sse_incremental_id.dart';
 import 'sse_parser.dart';
 import 'sse_value_parser.dart';
 
@@ -22,6 +23,7 @@ class SseClient implements SseClientBase {
   bool _starting = false;
   int _reconnectAttempts = 0;
   String? _lastEventId;
+  final SseIncrementalIdValidator _incrementalId = SseIncrementalIdValidator();
 
   SseClient(this.options);
 
@@ -116,12 +118,44 @@ class SseClient implements SseClientBase {
     if (_closed) return;
     final text = utf8.decode(chunk, allowMalformed: true);
     for (final frame in _parser.add(text)) {
+      if (options.enableSseIncrementalIdMismatch) {
+        final wasInitialized = _incrementalId.initialized;
+        final mismatch = _incrementalId.validate(frame, requireFirstId: true);
+        if (mismatch != null) {
+          // If the first frame doesn't have a numeric id, stop immediately.
+          if (!wasInitialized &&
+              (mismatch.reason == SseIncrementalIdMismatchReason.missingId ||
+                  mismatch.reason == SseIncrementalIdMismatchReason.nonNumericId)) {
+            _safeInvokeMismatchCallback(mismatch);
+            _framesController.addError(
+              StateError('SSE incremental id mismatch on first frame: ${mismatch.reason}'),
+            );
+            // ignore: discarded_futures
+            close();
+            return;
+          }
+
+          _safeInvokeMismatchCallback(mismatch);
+        }
+      }
+
       // Update last-event-id if the server sent an `id:` field (including empty reset).
       if (frame.fields.containsKey('id')) {
         final id = frame.id ?? '';
         _lastEventId = id.isEmpty ? null : id;
       }
       _framesController.add(frame);
+    }
+  }
+
+  void _safeInvokeMismatchCallback(SseIncrementalIdMismatch mismatch) {
+    final cb = options.sseIncrementalMismatchCallback;
+    if (cb == null) return;
+    try {
+      cb(mismatch);
+    } catch (e, st) {
+      // Never let user callback crash the SSE loop.
+      _framesController.addError(e, st);
     }
   }
 
