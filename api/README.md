@@ -123,6 +123,7 @@ Class | Method | HTTP request | Description
  - [ProductDto](doc//ProductDto.md)
  - [ProductUpdatedEventDto](doc//ProductUpdatedEventDto.md)
  - [RunningTextDto](doc//RunningTextDto.md)
+ - [SubscribePositionUpdatedRequest](doc//SubscribePositionUpdatedRequest.md)
  - [UpdateCurrencyExchangeRateRequest](doc//UpdateCurrencyExchangeRateRequest.md)
  - [UpdatePositionRequest](doc//UpdatePositionRequest.md)
  - [UpdateProductRequest](doc//UpdateProductRequest.md)
