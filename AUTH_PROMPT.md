@@ -405,6 +405,30 @@ final vm = AuthViewModel(authService: auth);
 AuthSection(viewModel: vm);
 ```
 
+### 3.2) Check Logged-In Status (No ViewModel)
+To check status without UI, use `OidcAuthService.getStatus()` or `OidcAuthService.isLoggedIn()`:
+
+- `getStatus()` is a local-only check from persisted values (no network).
+- For a "usable right now" check (best-effort), use `hasUsableAccessTokenNow()` which calls `getValidAccessToken()` and returns a boolean.
+
+```dart
+final auth = OidcAuthService(
+  serviceName: 'media',
+  serverPropertiesRegistryService: context.read<ServerPropertiesRegistryService>(),
+  eventManager: context.read<EventManager>(),
+);
+
+final status = await auth.getStatus();
+if (status.isLoggedIn) {
+  // Has access and/or refresh token stored.
+}
+
+final usableNow = await auth.hasUsableAccessTokenNow();
+if (usableNow) {
+  // Has a non-empty access token and refreshed if needed (when possible).
+}
+```
+
 ### 4) Logged-In Event
 On successful login, `OidcAuthService` publishes `AuthLoggedInEvent` via `EventManager`.
 The event includes `serviceName`, login method, Keycloak config metadata and expiry info (no raw tokens).

@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:qms_revamped_content_desktop_client/core/auth/auth_logger.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/model/auth_status.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/oidc/keycloak_oidc_client.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/oidc/loopback_server.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/oidc/model/device_authorization.dart';
@@ -236,6 +237,60 @@ class OidcAuthService {
 
   Future<ServerProperty?> getCurrentServerProperties() {
     return _loadServerPropertiesOrNull();
+  }
+
+  /// Local-only status check from persisted values (no network).
+  Future<AuthStatus> getStatus({
+    Duration accessTokenSkew = const Duration(seconds: 30),
+  }) async {
+    final sp = await _loadServerPropertiesOrNull();
+    if (sp == null) {
+      return AuthStatus(
+        serviceName: _serviceName,
+        hasConfig: false,
+        hasAccessToken: false,
+        hasRefreshToken: false,
+        accessTokenExpiresAtEpochMs: 0,
+        accessTokenIsExpired: true,
+      );
+    }
+
+    final hasConfig = sp.keycloakBaseUrl.trim().isNotEmpty &&
+        sp.keycloakRealm.trim().isNotEmpty &&
+        sp.keycloakClientId.trim().isNotEmpty;
+    final hasAccess = sp.oidcAccessToken.isNotEmpty;
+    final hasRefresh = sp.oidcRefreshToken.isNotEmpty;
+    final expMs = sp.oidcExpiresAtEpochMs;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final isExpired = expMs > 0 && nowMs >= (expMs - accessTokenSkew.inMilliseconds);
+
+    return AuthStatus(
+      serviceName: _serviceName,
+      hasConfig: hasConfig,
+      hasAccessToken: hasAccess,
+      hasRefreshToken: hasRefresh,
+      accessTokenExpiresAtEpochMs: expMs,
+      accessTokenIsExpired: isExpired,
+    );
+  }
+
+  Future<bool> isLoggedIn() async {
+    final status = await getStatus();
+    return status.isLoggedIn;
+  }
+
+  /// Best-effort check that a token is usable now:
+  /// - Reads stored tokens
+  /// - Refreshes if needed (when a refresh token exists)
+  /// - Returns true if it can provide a non-empty access token
+  ///
+  /// Note: This does not guarantee the token will be accepted by the server
+  /// (e.g. it could be revoked). For a hard guarantee you must make a request.
+  Future<bool> hasUsableAccessTokenNow({
+    Duration refreshSkew = const Duration(seconds: 30),
+  }) async {
+    final token = await getValidAccessToken(refreshSkew: refreshSkew);
+    return token != null && token.isNotEmpty;
   }
 
   Future<ServerProperty?> _persistTokenSet(OidcTokenSet tokenSet) async {
