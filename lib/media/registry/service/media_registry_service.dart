@@ -46,6 +46,95 @@ class MediaRegistryService {
     return media;
   }
 
+  Future<List<MediaData>> getAllByTagOrdered({required String tag}) async {
+    final db = _appDatabaseManager.appDatabase;
+    _log.d('getAllByTagOrdered(tag=$tag)');
+    return (db.select(db.media)
+          ..where((e) => e.tag.equals(tag))
+          ..orderBy([
+            (e) => OrderingTerm.asc(e.position),
+            (e) => OrderingTerm.asc(e.id),
+          ]))
+        .get();
+  }
+
+  Future<MediaData?> getOneByRemoteId({
+    required int remoteId,
+    required String tag,
+  }) async {
+    final db = _appDatabaseManager.appDatabase;
+    _log.d('getOneByRemoteId(remoteId=$remoteId tag=$tag)');
+    return (await (db.select(db.media)
+              ..where((e) => e.remoteId.equals(remoteId) & e.tag.equals(tag))
+              ..limit(1))
+            .get())
+        .firstOrNull;
+  }
+
+  Future<MediaData?> getOneById({required int id}) async {
+    final db = _appDatabaseManager.appDatabase;
+    _log.d('getOneById(id=$id)');
+    return (await (db.select(db.media)
+              ..where((e) => e.id.equals(id))
+              ..limit(1))
+            .get())
+        .firstOrNull;
+  }
+
+  Future<MediaData> upsertByRemoteId({
+    required int remoteId,
+    required String path,
+    required int position,
+    required String contentType,
+    required String mimeType,
+    required String tag,
+  }) async {
+    final db = _appDatabaseManager.appDatabase;
+    final existing = await getOneByRemoteId(remoteId: remoteId, tag: tag);
+
+    if (existing == null) {
+      return create(
+        CreateMediaRequest(
+          remoteId: remoteId,
+          path: path,
+          position: position,
+          contentType: contentType,
+          mimeType: mimeType,
+          tag: tag,
+        ),
+      );
+    }
+
+    _log.i(
+      'upsertByRemoteId(update remoteId=$remoteId tag=$tag id=${existing.id})',
+    );
+    final updated =
+        (await (db.update(
+              db.media,
+            )..where((e) => e.id.equals(existing.id))).writeReturning(
+              MediaCompanion(
+                path: Value(path),
+                position: Value(position),
+                contentType: Value(contentType),
+                mimeType: Value(mimeType),
+              ),
+            ))
+            .first;
+
+    // Mirror create/delete semantics for consumers that care about changes.
+    _eventManager.publishEvent(MediaCreatedEvent(media: updated));
+    return updated;
+  }
+
+  Future<void> deleteByRemoteId({
+    required int remoteId,
+    required String tag,
+  }) async {
+    final existing = await getOneByRemoteId(remoteId: remoteId, tag: tag);
+    if (existing == null) return;
+    await delete(existing.id);
+  }
+
   Future<void> updatePosition(UpdatePositionRequest request) async {
     _log.d(
       'updatePosition(currentId=${request.currentRecord.id} affected=${request.affectedRecords.length})',

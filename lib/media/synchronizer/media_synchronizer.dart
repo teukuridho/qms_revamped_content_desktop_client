@@ -1,0 +1,278 @@
+import 'dart:async';
+
+import 'package:openapi/api.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
+import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/media/downloader/media_downloader_base.dart';
+import 'package:qms_revamped_content_desktop_client/media/network/server_address_parser.dart';
+import 'package:qms_revamped_content_desktop_client/media/player/controller/media_reload_signal.dart';
+import 'package:qms_revamped_content_desktop_client/media/storage/service/media_deleter_base.dart';
+import 'package:qms_revamped_content_desktop_client/sse_client/sse_client.dart';
+
+import 'media_synchronizer_logger.dart';
+
+typedef SseClientFactory = SseClientBase Function(SseClientOptions options);
+
+class MediaSynchronizer {
+  static Duration retryDelay = const Duration(seconds: 3);
+
+  static const String uploadedFieldKey = 'media-uploaded';
+  static const String deletedFieldKey = 'media-deleted';
+
+  final String serviceName;
+  final String tag;
+
+  final EventManager _eventManager;
+  final ServerPropertiesRegistryService _serverPropertiesRegistryService;
+  final MediaDownloaderBase _downloader;
+  final MediaDeleterBase _deleter;
+  final MediaReloadSignal _playerController;
+  final SseClientFactory _sseClientFactory;
+
+  StreamSubscription<AuthLoggedInEvent>? _authSub;
+  SseClientBase? _sseClient;
+
+  bool _disposed = false;
+  int _generation = 0;
+
+  MediaSynchronizer({
+    required this.serviceName,
+    required this.tag,
+    required EventManager eventManager,
+    required ServerPropertiesRegistryService serverPropertiesRegistryService,
+    required MediaDownloaderBase downloader,
+    required MediaDeleterBase deleter,
+    required MediaReloadSignal playerController,
+    SseClientFactory? sseClientFactory,
+  }) : _eventManager = eventManager,
+       _serverPropertiesRegistryService = serverPropertiesRegistryService,
+       _downloader = downloader,
+       _deleter = deleter,
+       _playerController = playerController,
+       _sseClientFactory =
+           sseClientFactory ?? ((options) => SseClient(options));
+
+  void init() {
+    if (_disposed) {
+      throw StateError('MediaSynchronizer is disposed');
+    }
+
+    _authSub ??= _eventManager.listen<AuthLoggedInEvent>().listen(
+      _onAuthLoggedInEvent,
+      onError: (Object e, StackTrace st) {
+        MediaSynchronizerLogger.error(
+          'Auth listener error (serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
+        );
+      },
+    );
+  }
+
+  /// Starts the subscribe loop immediately (useful when the app already has a
+  /// usable token at startup and no `AuthLoggedInEvent` will be emitted).
+  void start() {
+    if (_disposed) return;
+    _startSubscribeLoop();
+  }
+
+  void _onAuthLoggedInEvent(AuthLoggedInEvent event) {
+    if (_disposed) return;
+    if (event.serviceName != serviceName) return;
+    MediaSynchronizerLogger.info(
+      'AuthLoggedInEvent matched. Starting media SSE subscribe loop (serviceName=$serviceName tag=$tag)',
+    );
+    _startSubscribeLoop();
+  }
+
+  void _startSubscribeLoop() {
+    _generation += 1;
+    final gen = _generation;
+    unawaited(_runSubscribeLoop(gen));
+  }
+
+  Future<void> _runSubscribeLoop(int gen) async {
+    await _closeSseClient();
+
+    while (!_disposed && gen == _generation) {
+      try {
+        await _subscribeOnce(gen);
+        if (_disposed || gen != _generation) break;
+        MediaSynchronizerLogger.warn(
+          'Media SSE stream ended; retrying in ${retryDelay.inSeconds}s (serviceName=$serviceName tag=$tag)',
+        );
+      } catch (e, st) {
+        MediaSynchronizerLogger.error(
+          'Media subscribe failed; retrying in ${retryDelay.inSeconds}s (serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
+        );
+      } finally {
+        await _closeSseClient();
+      }
+
+      if (_disposed || gen != _generation) break;
+      await Future<void>.delayed(retryDelay);
+    }
+  }
+
+  Future<void> _subscribeOnce(int gen) async {
+    final sp = await _serverPropertiesRegistryService.getOneByServiceName(
+      serviceName: serviceName,
+    );
+    if (sp == null) {
+      throw StateError(
+        'Missing server properties for serviceName=$serviceName',
+      );
+    }
+
+    final serverAddress = sp.serverAddress.trim();
+    if (serverAddress.isEmpty) {
+      throw StateError('Missing serverAddress for serviceName=$serviceName');
+    }
+
+    final token = sp.oidcAccessToken.trim();
+    if (token.isEmpty) {
+      throw StateError(
+        'Missing access token for serviceName=$serviceName (login first)',
+      );
+    }
+
+    final baseUri = ServerAddressParser.parse(serverAddress);
+    final subscribeUri = _buildSubscribeUri(baseUri);
+
+    MediaSynchronizerLogger.info(
+      'Subscribing media SSE: $subscribeUri (serviceName=$serviceName tag=$tag)',
+    );
+
+    final client = _sseClientFactory(
+      SseClientOptions(
+        url: subscribeUri,
+        headers: {'Authorization': 'Bearer $token'},
+        logger: (level, message, {error, stackTrace}) {
+          final prefix = 'SSE(media serviceName=$serviceName tag=$tag)';
+          switch (level) {
+            case SseClientLogLevel.debug:
+              MediaSynchronizerLogger.debug('$prefix $message');
+              break;
+            case SseClientLogLevel.info:
+              MediaSynchronizerLogger.info('$prefix $message');
+              break;
+            case SseClientLogLevel.warn:
+              MediaSynchronizerLogger.warn('$prefix $message');
+              break;
+            case SseClientLogLevel.error:
+              MediaSynchronizerLogger.error(
+                '$prefix $message',
+                error: error,
+                stackTrace: stackTrace,
+              );
+              break;
+          }
+        },
+      ),
+    );
+
+    _sseClient = client;
+    await client.start();
+
+    final f1 = _processUploaded(gen, client);
+    final f2 = _processDeleted(gen, client);
+    await Future.any([f1, f2]);
+  }
+
+  Future<void> _processUploaded(int gen, SseClientBase client) async {
+    await for (final raw in client.listenJson(uploadedFieldKey)) {
+      if (_disposed || gen != _generation) break;
+      MediaUploadedEventDto? dto;
+      try {
+        dto = MediaUploadedEventDto.fromJson(raw);
+      } catch (e, st) {
+        MediaSynchronizerLogger.error(
+          'Ignoring invalid media-uploaded payload: $raw',
+          error: e,
+          stackTrace: st,
+        );
+        continue;
+      }
+      if (dto == null) continue;
+      if (dto.media.tag != tag) continue;
+
+      MediaSynchronizerLogger.info(
+        'Media uploaded event received; downloading id=${dto.media.id} tag=$tag',
+      );
+      try {
+        await _downloader.downloadOne(dto.media);
+        _playerController.markReloadNeeded();
+      } catch (e, st) {
+        MediaSynchronizerLogger.error(
+          'Download failed for uploaded media id=${dto.media.id}',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+  }
+
+  Future<void> _processDeleted(int gen, SseClientBase client) async {
+    await for (final raw in client.listenJson(deletedFieldKey)) {
+      if (_disposed || gen != _generation) break;
+
+      // The OpenAPI model only includes `id`, but some servers may include `tag`.
+      final dto = MediaDeletedEventDto.fromJson(raw);
+      if (dto == null) continue;
+
+      MediaSynchronizerLogger.info(
+        'Media deleted event received; deleting remoteId=${dto.id} (tag=$tag)',
+      );
+      try {
+        await _deleter.deleteLocalByRemoteId(dto.id);
+        _playerController.markReloadNeeded();
+      } catch (e, st) {
+        MediaSynchronizerLogger.error(
+          'Delete failed for remoteId=${dto.id}',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+  }
+
+  Uri _buildSubscribeUri(Uri baseUri) {
+    final segments = <String>[
+      ...baseUri.pathSegments.where((e) => e.isNotEmpty),
+      'media-subscribe',
+    ];
+    return baseUri.replace(
+      pathSegments: segments,
+      queryParameters: <String, String>{'tag': tag},
+    );
+  }
+
+  Future<void> _closeSseClient() async {
+    final client = _sseClient;
+    _sseClient = null;
+    if (client != null) {
+      try {
+        await client.close();
+      } catch (e, st) {
+        MediaSynchronizerLogger.error(
+          'Error closing media SSE client (serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+  }
+
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+
+    await _authSub?.cancel();
+    _authSub = null;
+
+    await _closeSseClient();
+  }
+}

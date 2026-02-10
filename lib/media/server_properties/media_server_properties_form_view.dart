@@ -3,11 +3,13 @@ import 'package:qms_revamped_content_desktop_client/core/server_properties/form/
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 
 class MediaServerPropertiesFormView extends ServerPropertiesFormView {
-  MediaServerPropertiesFormView(
-      {super.key, required ServerPropertiesRegistryService registryService})
-      : super(viewModel: ServerPropertiesFormViewModel(
-      registryService: registryService,
-      serviceName: "media"
-  ));
-
+  MediaServerPropertiesFormView({
+    super.key,
+    required ServerPropertiesRegistryService registryService,
+  }) : super(
+         viewModel: ServerPropertiesFormViewModel(
+           registryService: registryService,
+           serviceName: "media",
+         ),
+       );
 }
