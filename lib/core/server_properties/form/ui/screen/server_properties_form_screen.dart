@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/auth_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/ui/view_model/auth_view_model.dart';
+import 'package:qms_revamped_content_desktop_client/core/config/app_config.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view/server_properties_form_view.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view_model/server_properties_form_view_model.dart';
@@ -23,17 +24,15 @@ class ServerPropertiesFormScreen extends StatefulWidget {
 
 class _ServerPropertiesFormScreenState
     extends State<ServerPropertiesFormScreen> {
-  static const String _serviceName = "test";
-
   late final ServerPropertiesFormViewModel viewModel =
       ServerPropertiesFormViewModel(
         registryService: widget.registryService,
-        serviceName: _serviceName,
+        serviceName: AppConfig.serviceName,
       );
 
   late final AuthViewModel authViewModel = AuthViewModel(
     authService: OidcAuthService(
-      serviceName: _serviceName,
+      serviceName: AppConfig.serviceName,
       serverPropertiesRegistryService: widget.registryService,
       eventManager: widget.eventManager,
     ),
