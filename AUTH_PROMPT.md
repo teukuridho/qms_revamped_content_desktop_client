@@ -285,7 +285,8 @@ UX notes:
 
 ### UI Components to add
 Create `lib/core/auth/ui/auth_section.dart`:
-- Stateless/widget that consumes an `AuthViewModel`.
+- Widget that consumes an `AuthViewModel`.
+- Shows snackbars on login success/failure (browser + QR) and logout.
 
 Create `lib/core/auth/ui/view_model/auth_view_model.dart`:
 - Depends on `OidcAuthService` and `serviceName`.
@@ -297,6 +298,10 @@ Create `lib/core/auth/ui/view_model/auth_view_model.dart`:
     - QR string
     - manual URL + code
     - countdown from `expires_in`
+
+UX:
+- Auto-start QR login on startup if Keycloak config is present and the device is not logged in.
+- Provide Cancel actions for browser login and QR polling (to make retries reliable).
 
 Update `ServerPropertiesFormViewModel`:
 - Add controllers for:
@@ -341,6 +346,78 @@ Preferred scalable approach:
 Event wiring:
 - Ensure `EventManager` is injected into `OidcAuthService` so it can emit `AuthLoggedInEvent`.
 - Listen with `eventManager.listen<AuthLoggedInEvent>()` where needed.
+
+---
+
+## Usage
+
+### 1) Configure Keycloak Per Service
+Open the Server Properties screen and fill:
+- `Keycloak Base URL` (no trailing slash)
+- `Keycloak Realm`
+- `Keycloak Client ID`
+Then click `Submit` to persist these values in SQLite for the current `serviceName`.
+
+### 2) Login From UI
+The auth UI is `AuthSection` (embedded in `ServerPropertiesFormView`):
+- `Login (Browser)` runs Authorization Code + PKCE and opens the system browser.
+- `Login (QR)` starts Device Authorization, renders a QR, and auto-starts polling.
+- `Logout / Clear Tokens` clears stored tokens.
+
+UX behaviors implemented:
+- Snackbars are shown for login success/failure (browser + QR) and logout.
+- QR login can auto-start on app start if Keycloak config is present and the device is not logged in.
+- If browser login is retried while an old attempt is still pending, the previous attempt is canceled first.
+- Polling has request timeouts to avoid hanging on network issues.
+- The UI shows helper text: “Please connect your phone to the same network/VPN as this computer, then scan the QR to sign in.”
+
+### 3) Programmatic Access Token
+Use `OidcAuthService.getValidAccessToken()` to retrieve a bearer token and auto-refresh when possible:
+
+```dart
+final auth = OidcAuthService(
+  serviceName: 'media',
+  serverPropertiesRegistryService: context.read<ServerPropertiesRegistryService>(),
+  eventManager: context.read<EventManager>(),
+);
+
+final token = await auth.getValidAccessToken();
+if (token == null) {
+  // Not logged in.
+  return;
+}
+
+// Use in API call:
+// headers: {'Authorization': 'Bearer $token'}
+```
+
+### 3.1) Embedding Auth UI Elsewhere
+You can embed the auth UI anywhere by creating an `OidcAuthService` + `AuthViewModel` for a `serviceName`:
+
+```dart
+final auth = OidcAuthService(
+  serviceName: 'media',
+  serverPropertiesRegistryService: context.read<ServerPropertiesRegistryService>(),
+  eventManager: context.read<EventManager>(),
+);
+final vm = AuthViewModel(authService: auth);
+
+AuthSection(viewModel: vm);
+```
+
+### 4) Logged-In Event
+On successful login, `OidcAuthService` publishes `AuthLoggedInEvent` via `EventManager`.
+The event includes `serviceName`, login method, Keycloak config metadata and expiry info (no raw tokens).
+
+Example listener:
+```dart
+final sub = context.read<EventManager>().listen<AuthLoggedInEvent>().listen((e) {
+  // e.serviceName, e.method, e.accessTokenExpiresAtEpochMs, ...
+});
+```
+
+### 5) Logs
+Auth operations log using `AuthLogger` (tag/name: `auth`). Tokens are not logged.
 
 ---
 
