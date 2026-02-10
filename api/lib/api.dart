@@ -67,6 +67,7 @@ part 'model/product_deleted_event_dto.dart';
 part 'model/product_dto.dart';
 part 'model/product_updated_event_dto.dart';
 part 'model/running_text_dto.dart';
+part 'model/subscribe_media_request.dart';
 part 'model/subscribe_position_updated_request.dart';
 part 'model/update_currency_exchange_rate_request.dart';
 part 'model/update_position_request.dart';
