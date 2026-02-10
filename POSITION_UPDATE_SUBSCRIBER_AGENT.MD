@@ -38,6 +38,10 @@ Provider(
     final s = PositionUpdateSubscriber(
       serviceName: serviceName,
       tag: 'main',
+      sseIncrementalMismatchCallback: (mismatch) {
+        // Optional: trigger app-specific recovery (invalidate caches, refetch, etc).
+        // The subscriber already logs the mismatch and the SSE client refreshes the connection.
+      },
       eventManager: context.read<EventManager>(),
       serverPropertiesRegistryService: context.read<ServerPropertiesRegistryService>(),
     )..init();
@@ -64,6 +68,15 @@ Provider(
 6. Use `SseClient` (see `SSE_AGENT.MD`) and listen on field key `position-updated`.
 7. Parse payload as `PositionUpdatedEventDto`.
 8. If `dto.tableName == serviceName` and `dto.tag == tag`, publish the DTO via `EventManager`.
+
+## Incremental SSE Id Mismatch
+
+`PositionUpdateSubscriber` enables SSE incremental numeric `id:` mismatch detection:
+
+- `enableSseIncrementalIdMismatch = true`
+- `shouldRefreshWhenIdMismatch = true`
+
+The subscriber requires `sseIncrementalMismatchCallback` and will invoke it when a mismatch is detected.
 
 ## Retry
 

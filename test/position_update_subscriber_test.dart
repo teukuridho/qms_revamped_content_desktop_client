@@ -122,6 +122,7 @@ void main() {
     final subscriber = PositionUpdateSubscriber(
       serviceName: 'svcA',
       tag: 't1',
+      sseIncrementalMismatchCallback: (_) {},
       eventManager: em,
       serverPropertiesRegistryService: FakeServerPropertiesRegistryService(
         _serverProperty(
@@ -168,6 +169,7 @@ void main() {
     final subscriber = PositionUpdateSubscriber(
       serviceName: serviceName,
       tag: tag,
+      sseIncrementalMismatchCallback: (_) {},
       eventManager: em,
       serverPropertiesRegistryService: FakeServerPropertiesRegistryService(
         _serverProperty(
@@ -210,6 +212,9 @@ void main() {
     expect(capturedOptions!.url.queryParameters['tableName'], serviceName);
     expect(capturedOptions!.url.queryParameters['tag'], tag);
     expect(capturedOptions!.headers['Authorization'], 'Bearer token123');
+    expect(capturedOptions!.enableSseIncrementalIdMismatch, isTrue);
+    expect(capturedOptions!.shouldRefreshWhenIdMismatch, isTrue);
+    expect(capturedOptions!.sseIncrementalMismatchCallback, isNotNull);
 
     fakeClient.add(PositionUpdateSubscriber.sseFieldKey, {
       'tableName': serviceName,
@@ -239,6 +244,7 @@ void main() {
     final subscriber = PositionUpdateSubscriber(
       serviceName: serviceName,
       tag: tag,
+      sseIncrementalMismatchCallback: (_) {},
       eventManager: em,
       serverPropertiesRegistryService: FakeServerPropertiesRegistryService(
         _serverProperty(
@@ -309,6 +315,7 @@ void main() {
     final subscriber = PositionUpdateSubscriber(
       serviceName: serviceName,
       tag: tag,
+      sseIncrementalMismatchCallback: (_) {},
       eventManager: em,
       serverPropertiesRegistryService: FakeServerPropertiesRegistryService(
         _serverProperty(
@@ -347,4 +354,3 @@ void main() {
     await subscriber.dispose();
   });
 }
-

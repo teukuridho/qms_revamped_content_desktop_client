@@ -19,6 +19,7 @@ class PositionUpdateSubscriber {
 
   final String serviceName;
   final String tag;
+  final SseIncrementalMismatchCallback sseIncrementalMismatchCallback;
 
   final EventManager _eventManager;
   final ServerPropertiesRegistryService _serverPropertiesRegistryService;
@@ -33,6 +34,7 @@ class PositionUpdateSubscriber {
   PositionUpdateSubscriber({
     required this.serviceName,
     required this.tag,
+    required this.sseIncrementalMismatchCallback,
     required EventManager eventManager,
     required ServerPropertiesRegistryService serverPropertiesRegistryService,
     SseClientFactory? sseClientFactory,
@@ -135,6 +137,14 @@ class PositionUpdateSubscriber {
         url: subscribeUri,
         headers: {
           'Authorization': 'Bearer $token',
+        },
+        enableSseIncrementalIdMismatch: true,
+        shouldRefreshWhenIdMismatch: true,
+        sseIncrementalMismatchCallback: (mismatch) {
+          PositionUpdateSubscriberLogger.warn(
+            'SSE incremental id mismatch (serviceName=$serviceName tag=$tag): $mismatch',
+          );
+          sseIncrementalMismatchCallback(mismatch);
         },
       ),
     );
@@ -244,4 +254,3 @@ class PositionUpdateSubscriber {
     await _closeSseClient();
   }
 }
-

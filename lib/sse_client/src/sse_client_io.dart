@@ -123,25 +123,13 @@ class SseClient implements SseClientBase {
     for (final frame in _parser.add(text)) {
       if (options.enableSseIncrementalIdMismatch) {
         final wasInitialized = _incrementalId.initialized;
-        final mismatch = _incrementalId.validate(frame, requireFirstId: true);
+        // Do not require `id:` on the first frames. Start validating once a numeric id is observed.
+        final mismatch = _incrementalId.validate(frame, requireFirstId: false);
         if (mismatch != null) {
-          // If the first frame doesn't have a numeric id, stop immediately.
-          if (!wasInitialized &&
-              (mismatch.reason == SseIncrementalIdMismatchReason.missingId ||
-                  mismatch.reason == SseIncrementalIdMismatchReason.nonNumericId)) {
-            _safeInvokeMismatchCallback(mismatch);
-            _framesController.addError(
-              StateError('SSE incremental id mismatch on first frame: ${mismatch.reason}'),
-            );
-            // ignore: discarded_futures
-            close();
-            return;
-          }
-
           _safeInvokeMismatchCallback(mismatch);
 
           // Refresh on mismatch (but do not continue/forward invalid frames).
-          // First-frame missing/non-numeric id is still terminal per spec.
+          // Only refresh after the validator has been initialized with a numeric id.
           if (options.shouldRefreshWhenIdMismatch && wasInitialized && !_refreshing) {
             _refreshing = true;
             // ignore: discarded_futures

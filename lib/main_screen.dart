@@ -26,6 +26,8 @@ class _MainScreenState extends State<MainScreen> {
       create: (context) => PositionUpdateSubscriber(
         serviceName: AppConfig.serviceName,
         tag: AppConfig.positionUpdateTag,
+        // Subscriber already logs the mismatch; this hook is for app-specific reactions.
+        sseIncrementalMismatchCallback: (_) {},
         eventManager: context.read<EventManager>(),
         serverPropertiesRegistryService:
             context.read<ServerPropertiesRegistryService>(),
