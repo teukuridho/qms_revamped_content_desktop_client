@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:openapi/api.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
+import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/event/position_update_sse_id_mismatch_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/sse_client/sse_client.dart';
 
@@ -165,6 +166,14 @@ class PositionUpdateSubscriber {
         sseIncrementalMismatchCallback: (mismatch) {
           PositionUpdateSubscriberLogger.warn(
             'SSE incremental id mismatch (serviceName=$serviceName tag=$tag): $mismatch',
+          );
+          _eventManager.publishEvent(
+            PositionUpdateSseIdMismatchEvent(
+              serviceName: serviceName,
+              tag: tag,
+              occurredAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+              mismatch: mismatch,
+            ),
           );
           sseIncrementalMismatchCallback(mismatch);
         },

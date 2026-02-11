@@ -5,6 +5,7 @@ import 'package:openapi/api.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
+import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/event/position_update_sse_id_mismatch_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/request/create_server_properties_request.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/request/update_service_by_name_request.dart';
@@ -351,6 +352,79 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     expect(factoryCalls, greaterThanOrEqualTo(2));
 
+    await subscriber.dispose();
+  });
+
+  test('publishes PositionUpdateSseIdMismatchEvent and invokes callback on mismatch', () async {
+    final em = EventManager()..init();
+    final serviceName = 'svcA';
+    final tag = 't1';
+
+    SseClientOptions? capturedOptions;
+    var callbackCalled = 0;
+
+    final subscriber = PositionUpdateSubscriber(
+      serviceName: serviceName,
+      tag: tag,
+      sseIncrementalMismatchCallback: (_) {
+        callbackCalled += 1;
+      },
+      eventManager: em,
+      serverPropertiesRegistryService: FakeServerPropertiesRegistryService(
+        _serverProperty(
+          serviceName: serviceName,
+          serverAddress: 'https://example.com',
+          accessToken: 'token123',
+        ),
+      ),
+      sseClientFactory: (options) {
+        capturedOptions = options;
+        return FakeSseClient(options);
+      },
+    )..init();
+
+    final got = Completer<PositionUpdateSseIdMismatchEvent>();
+    final sub = em.listen<PositionUpdateSseIdMismatchEvent>().listen((event) {
+      if (!got.isCompleted) got.complete(event);
+    });
+
+    em.publishEvent(
+      AuthLoggedInEvent(
+        serviceName: serviceName,
+        method: 'browser_pkce',
+        loggedInAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+        keycloakBaseUrl: '',
+        keycloakRealm: '',
+        keycloakClientId: '',
+        scope: '',
+        tokenType: '',
+        accessTokenExpiresAtEpochMs: 0,
+        hasRefreshToken: false,
+      ),
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(capturedOptions, isNotNull);
+    expect(capturedOptions!.sseIncrementalMismatchCallback, isNotNull);
+
+    final mismatch = SseIncrementalIdMismatch(
+      expectedId: 5,
+      actualIdRaw: '9',
+      actualIdParsed: 9,
+      reason: SseIncrementalIdMismatchReason.unexpectedId,
+      frame: SseFrame.fromFields(const {'id': ['9']}),
+    );
+
+    capturedOptions!.sseIncrementalMismatchCallback!(mismatch);
+
+    final published = await got.future.timeout(const Duration(seconds: 1));
+    expect(published.serviceName, serviceName);
+    expect(published.tag, tag);
+    expect(published.mismatch, same(mismatch));
+    expect(published.occurredAtEpochMs, greaterThan(0));
+    expect(callbackCalled, 1);
+
+    await sub.cancel();
     await subscriber.dispose();
   });
 }

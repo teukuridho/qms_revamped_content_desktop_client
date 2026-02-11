@@ -18,13 +18,23 @@ Note: Swagger models use `tableName` for the service identifier. In this app, `t
 
 ## Output (Event Bus)
 
-The subscriber publishes `PositionUpdatedEventDto` via `EventManager`.
+The subscriber publishes:
+
+- `PositionUpdatedEventDto` when valid position data is received and matches `serviceName` + `tag`.
+- `PositionUpdateSseIdMismatchEvent` when SSE incremental `id:` mismatch is detected.
 
 Listeners can subscribe with:
 
 ```dart
 eventManager.listen<PositionUpdatedEventDto>().listen((dto) {
   // handle dto
+});
+
+eventManager.listen<PositionUpdateSseIdMismatchEvent>().listen((event) {
+  // event.serviceName
+  // event.tag
+  // event.occurredAtEpochMs
+  // event.mismatch (expectedId, actualIdRaw, reason, etc)
 });
 ```
 
@@ -77,6 +87,7 @@ Provider(
 - `shouldRefreshWhenIdMismatch = true`
 
 The subscriber requires `sseIncrementalMismatchCallback` and will invoke it when a mismatch is detected.
+It also publishes `PositionUpdateSseIdMismatchEvent` through `EventManager`.
 
 ## Retry
 
@@ -87,3 +98,4 @@ The subscriber requires `sseIncrementalMismatchCallback` and will invoke it when
 
 - `lib/core/position_update/subscriber/position_update_subscriber.dart`
 - `lib/core/position_update/subscriber/position_update_subscriber_logger.dart`
+- `lib/core/position_update/subscriber/event/position_update_sse_id_mismatch_event.dart`
