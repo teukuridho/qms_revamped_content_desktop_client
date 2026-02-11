@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:openapi/api.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/auth_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/event/position_update_sse_id_mismatch_event.dart';
@@ -23,6 +24,7 @@ class PositionUpdateSubscriber {
   final SseIncrementalMismatchCallback sseIncrementalMismatchCallback;
 
   final EventManager _eventManager;
+  final OidcAuthService _authService;
   final ServerPropertiesRegistryService _serverPropertiesRegistryService;
   final SseClientFactory _sseClientFactory;
 
@@ -38,8 +40,15 @@ class PositionUpdateSubscriber {
     required this.sseIncrementalMismatchCallback,
     required EventManager eventManager,
     required ServerPropertiesRegistryService serverPropertiesRegistryService,
+    OidcAuthService? authService,
     SseClientFactory? sseClientFactory,
   }) : _eventManager = eventManager,
+       _authService =
+           authService ??
+           OidcAuthService(
+             serviceName: serviceName,
+             serverPropertiesRegistryService: serverPropertiesRegistryService,
+           ),
        _serverPropertiesRegistryService = serverPropertiesRegistryService,
        _sseClientFactory =
            sseClientFactory ?? ((options) => SseClient(options));
@@ -59,9 +68,37 @@ class PositionUpdateSubscriber {
         );
       },
     );
+
+    // If token is already available at startup, begin subscription immediately.
+    unawaited(_bootstrapIfTokenUsableNow());
+  }
+
+  Future<void> _bootstrapIfTokenUsableNow() async {
+    try {
+      final hasToken = await _authService.hasUsableAccessTokenNow();
+      if (!hasToken || _disposed) return;
+      PositionUpdateSubscriberLogger.info(
+        'Usable token detected at init. Starting SSE subscribe loop immediately '
+        '(serviceName=$serviceName tag=$tag)',
+      );
+      _startSubscribeLoop();
+    } catch (e, st) {
+      PositionUpdateSubscriberLogger.warn(
+        'Token bootstrap check failed (serviceName=$serviceName tag=$tag)',
+      );
+      PositionUpdateSubscriberLogger.error(
+        'Position subscriber token bootstrap error',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   void _onAuthLoggedInEvent(AuthLoggedInEvent event) {
+    PositionUpdateSubscriberLogger.info(
+      'AuthLoggedInEvent observed '
+      '(incoming serviceName=${event.serviceName}, expected serviceName=$serviceName tag=$tag)',
+    );
     if (_disposed) return;
     if (event.serviceName != serviceName) return;
 
@@ -122,10 +159,10 @@ class PositionUpdateSubscriber {
       throw StateError('Missing serverAddress for serviceName=$serviceName');
     }
 
-    final token = sp.oidcAccessToken.trim();
+    final token = (await _authService.getValidAccessToken())?.trim() ?? '';
     if (token.isEmpty) {
       throw StateError(
-        'Missing access token for serviceName=$serviceName (login first)',
+        'Missing/expired access token for serviceName=$serviceName (login first)',
       );
     }
 
@@ -211,6 +248,11 @@ class PositionUpdateSubscriber {
       final tableName = dto.tableName;
       final dtoTag = dto.tag;
       if (tableName != serviceName || dtoTag != tag) {
+        PositionUpdateSubscriberLogger.warn(
+          'Ignoring position update due to tableName/tag mismatch '
+          '(expected serviceName=$serviceName tag=$tag, '
+          'actual tableName=$tableName tag=$dtoTag id=${dto.id} newPosition=${dto.newPosition})',
+        );
         continue;
       }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qms_revamped_content_desktop_client/core/config/app_config.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
@@ -9,8 +10,8 @@ import 'package:qms_revamped_content_desktop_client/media/storage/directory/medi
 import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 
 class MediaTestScreen extends StatelessWidget {
-  static const String serviceName = 'main-media';
-  static const String tag = 'main';
+  static const String serviceName = AppConfig.mediaServiceName;
+  static const String tag = AppConfig.mediaTag;
 
   const MediaTestScreen({super.key});
 

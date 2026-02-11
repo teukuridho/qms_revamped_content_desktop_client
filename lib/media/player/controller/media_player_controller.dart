@@ -261,7 +261,9 @@ class MediaPlayerController extends ChangeNotifier
 
     final loadedAfterRetry = await _openAndWaitForVideoFrame(path);
     if (!loadedAfterRetry) {
-      throw StateError('Unable to render video frames: $path');
+      _log.w(
+        'Unable to confirm video frame after retry; keeping playback alive (path=$path)',
+      );
     }
   }
 

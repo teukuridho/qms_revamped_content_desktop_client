@@ -3,6 +3,9 @@ import 'package:qms_revamped_content_desktop_client/core/app_directory/app_direc
 import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
+import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
+import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent/currency_exchange_rate_feature.dart';
+import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
 
 class InitService {
   static final AppLog _log = AppLog('init');
@@ -10,15 +13,24 @@ class InitService {
   late final AppDirectoryService _appDirectoryService;
   late final AppDatabaseManager _appDatabaseManager;
   late final EventManager _eventManager;
+  late final MediaFeature _mediaFeature;
+  late final CurrencyExchangeRateFeature _currencyExchangeRateFeature;
+  late final List<PositionUpdateSubscriber> _positionUpdateSubscribers;
 
   InitService({
     required AppDirectoryService appDirectoryService,
     required AppDatabaseManager appDatabaseManager,
     required EventManager eventManager,
+    required MediaFeature mediaFeature,
+    required CurrencyExchangeRateFeature currencyExchangeRateFeature,
+    required List<PositionUpdateSubscriber> positionUpdateSubscribers,
   }) {
     _appDirectoryService = appDirectoryService;
     _appDatabaseManager = appDatabaseManager;
     _eventManager = eventManager;
+    _mediaFeature = mediaFeature;
+    _currencyExchangeRateFeature = currencyExchangeRateFeature;
+    _positionUpdateSubscribers = positionUpdateSubscribers;
   }
 
   Stream<String> init() async* {
@@ -34,6 +46,17 @@ class InitService {
       }),
       InitProcess("App Database", () async {
         await _appDatabaseManager.init();
+      }),
+      InitProcess("Position Update Subscribers", () async {
+        for (final subscriber in _positionUpdateSubscribers) {
+          subscriber.init();
+        }
+      }),
+      InitProcess("Media Feature", () async {
+        await _mediaFeature.agent.init();
+      }),
+      InitProcess("Currency Exchange Rate Feature", () async {
+        await _currencyExchangeRateFeature.agent.init();
       }),
     ];
 

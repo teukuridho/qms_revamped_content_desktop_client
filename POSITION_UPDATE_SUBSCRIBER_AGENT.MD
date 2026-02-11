@@ -14,7 +14,8 @@ Note: Swagger models use `tableName` for the service identifier. In this app, `t
 ## Current App Wiring
 
 - Config constants: `lib/core/config/app_config.dart`
-- Provider injection: `lib/main_screen.dart`
+- Provider creation: `lib/main.dart`
+- Subscriber startup (`init()`): `lib/core/init/service/init_service.dart`
 
 ## Output (Event Bus)
 
@@ -38,27 +39,55 @@ eventManager.listen<PositionUpdateSseIdMismatchEvent>().listen((event) {
 });
 ```
 
-## Manual Injection (Provider)
+## App Startup Injection (Provider + InitService)
 
-Typical pattern (manual injection + start in `create`):
+Current app pattern (create in `main.dart`, initialize in `InitService`):
+
+```dart
+Provider<List<PositionUpdateSubscriber>>(
+  create: (context) => [
+    PositionUpdateSubscriber(
+      serviceName: AppConfig.mediaServiceName,
+      tag: AppConfig.mediaTag,
+      sseIncrementalMismatchCallback: (_) {},
+      eventManager: context.read<EventManager>(),
+      serverPropertiesRegistryService:
+          context.read<ServerPropertiesRegistryService>(),
+    ),
+    PositionUpdateSubscriber(
+      serviceName: AppConfig.currencyExchangeRateServiceName,
+      tag: AppConfig.currencyExchangeRateTag,
+      sseIncrementalMismatchCallback: (_) {},
+      eventManager: context.read<EventManager>(),
+      serverPropertiesRegistryService:
+          context.read<ServerPropertiesRegistryService>(),
+    ),
+  ],
+);
+
+// InitService.init()
+for (final subscriber in positionUpdateSubscribers) {
+  subscriber.init();
+}
+```
+
+Reason: subscribers must attach auth listeners before the user logs in.
+
+## Alternate Screen-Scoped Injection
+
+You can still do screen-scoped injection when needed:
 
 ```dart
 Provider(
-  create: (context) {
-    final s = PositionUpdateSubscriber(
-      serviceName: serviceName,
-      tag: 'main',
-      sseIncrementalMismatchCallback: (mismatch) {
-        // Optional: trigger app-specific recovery (invalidate caches, refetch, etc).
-        // The subscriber already logs the mismatch and the SSE client refreshes the connection.
-      },
-      eventManager: context.read<EventManager>(),
-      serverPropertiesRegistryService: context.read<ServerPropertiesRegistryService>(),
-    )..init();
-    return s;
-  },
+  create: (context) => PositionUpdateSubscriber(
+    serviceName: serviceName,
+    tag: tag,
+    sseIncrementalMismatchCallback: (_) {},
+    eventManager: context.read<EventManager>(),
+    serverPropertiesRegistryService:
+        context.read<ServerPropertiesRegistryService>(),
+  )..init(),
   dispose: (context, s) {
-    // Provider dispose is sync, so we intentionally don't await.
     // ignore: discarded_futures
     s.dispose();
   },
@@ -68,16 +97,20 @@ Provider(
 ## Subscribe Flow
 
 1. Listen to `AuthLoggedInEvent` from `EventManager`.
-2. If `event.serviceName == serviceName`, start subscribe loop.
-3. Load server properties for `serviceName` via `ServerPropertiesRegistryService.getOneByServiceName`.
-4. Build SSE URL:
+2. Also at `init()`, if a usable token already exists, start subscribe loop
+   immediately (no need to wait for a new login event).
+3. If `event.serviceName == serviceName`, start subscribe loop.
+4. Load server properties for `serviceName` via `ServerPropertiesRegistryService.getOneByServiceName`.
+5. Build SSE URL:
 
 `GET {serverAddress}/position-updated-subscribe?tableName={serviceName}&tag={tag}`
 
-5. Pass `Authorization: Bearer {oidcAccessToken}` header.
-6. Use `SseClient` (see `SSE_AGENT.MD`) and listen on field key `position-updated`.
-7. Parse payload as `PositionUpdatedEventDto`.
-8. If `dto.tableName == serviceName` and `dto.tag == tag`, publish the DTO via `EventManager`.
+6. Resolve token via `OidcAuthService.getValidAccessToken()` and pass
+   `Authorization: Bearer {token}` header.
+7. Use `SseClient` (see `SSE_AGENT.MD`) and listen on field key `position-updated`.
+8. Parse payload as `PositionUpdatedEventDto`.
+9. If `dto.tableName == serviceName` and `dto.tag == tag`, publish the DTO via `EventManager`.
+10. If `tableName/tag` does not match, log a warning and ignore the event.
 
 ## Incremental SSE Id Mismatch
 

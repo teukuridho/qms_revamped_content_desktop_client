@@ -15,7 +15,8 @@ Implements a media feature that:
 
 This module follows the same patterns as `POSITION_UPDATE_SUBSCRIBER_AGENT.MD`:
 
-- manual Provider injection
+- app-level Provider creation in `main.dart`
+- startup initialization in `InitService`
 - event-driven orchestration via `EventManager`
 - SSE reconnect loop with retry delay
 
@@ -23,6 +24,11 @@ This module follows the same patterns as `POSITION_UPDATE_SUBSCRIBER_AGENT.MD`:
 
 - `serviceName`: which server-properties row to use (same concept as other services)
 - `tag`: media playlist tag (filtering for downloads + SSE)
+
+Current app constants:
+
+- `serviceName = AppConfig.mediaServiceName` (`media`)
+- `tag = AppConfig.mediaTag` (`main`)
 
 ## Backend Endpoints Used
 
@@ -48,7 +54,7 @@ SSE fields:
 - Orchestrator: `lib/media/agent/media_agent.dart`
 - Wiring helper: `lib/media/agent/media_feature.dart`
 - Test screen: `lib/media/test/ui/screen/media_test_screen.dart`
-  (fixed `serviceName = 'main-media'`, `tag = 'main'`)
+  (fixed `serviceName = AppConfig.mediaServiceName`, `tag = AppConfig.mediaTag`)
 - Downloader:
   - `lib/media/downloader/media_downloader.dart`
   - `lib/media/downloader/remote_media_registry_client.dart` (OpenAPI list)
@@ -76,7 +82,8 @@ SSE fields:
    On SSE incremental `id:` mismatch it also publishes
    `PositionUpdateSseIdMismatchEvent`.
 2. `MediaPositionUpdateListener` filters by `tableName == serviceName` and
-   `tag == tag`, then calls
+   `tag == tag`, maps SSE `id`/`affectedRecordRows[].id` (remote ids) to local
+   Drift row ids by `(remoteId, tag)`, then calls
    `MediaRegistryService.updatePosition(UpdatePositionRequest)`.
 3. `MediaRegistryService` updates local media positions and publishes
    `MediaMassPositionUpdatedEvent`.
@@ -137,77 +144,36 @@ Downloader UI events (for snackbars in media UI):
 - `MediaDownloadSucceededEvent(serviceName, tag, downloadedCount)` (success snackbar)
 - `MediaDownloadFailedEvent(serviceName, tag, message)` (error snackbar)
 
-## Usage (Manual Provider Injection)
+## Usage (App-Level Providers + InitService)
 
-Minimal example wiring for a screen that embeds the media player:
+Current app wiring:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// main.dart
+Provider<MediaFeature>(
+  create: (context) => MediaFeature.create(
+    serviceName: AppConfig.mediaServiceName,
+    tag: AppConfig.mediaTag,
+    eventManager: context.read<EventManager>(),
+    appDatabaseManager: context.read<AppDatabaseManager>(),
+    serverPropertiesRegistryService:
+        context.read<ServerPropertiesRegistryService>(),
+    mediaStorageDirectoryService:
+        context.read<MediaStorageDirectoryService>(),
+  ),
+);
 
-import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
-import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
-import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
-import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
-import 'package:qms_revamped_content_desktop_client/media/player/ui/media_player_view.dart';
-import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
+// init_service.dart
+await mediaFeature.agent.init();
 
-class MyMediaScreen extends StatelessWidget {
-  const MyMediaScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    const serviceName = 'main-media';
-    const tag = 'main';
-
-    return Provider<MediaFeature>(
-      create: (context) {
-        final feature = MediaFeature.create(
-          serviceName: serviceName,
-          tag: tag,
-          eventManager: context.read<EventManager>(),
-          appDatabaseManager: context.read<AppDatabaseManager>(),
-          serverPropertiesRegistryService:
-              context.read<ServerPropertiesRegistryService>(),
-          mediaStorageDirectoryService:
-              context.read<MediaStorageDirectoryService>(),
-        );
-        // Provider create can be async via "unawaited".
-        // ignore: discarded_futures
-        feature.agent.init();
-        return feature;
-      },
-      dispose: (context, feature) {
-        // ignore: discarded_futures
-        feature.agent.dispose();
-      },
-      child: Builder(
-        builder: (context) {
-          final feature = context.read<MediaFeature>();
-          return Scaffold(
-            body: MediaPlayerView(
-              serviceName: serviceName,
-              tag: tag,
-              eventManager: context.read<EventManager>(),
-              serverPropertiesRegistryService:
-                  context.read<ServerPropertiesRegistryService>(),
-              controller: feature.playerController,
-              onReinitializeRequested: () async {
-                await feature.agent.reinit(
-                  autoPlay: true,
-                  startSynchronizer: true,
-                );
-                await feature.playerController.playFromFirst(
-                  reason: 'context_menu_reinitialize',
-                );
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
+// main_screen.dart
+final mediaFeature = context.read<MediaFeature>();
+MediaPlayerView(
+  serviceName: AppConfig.mediaServiceName,
+  tag: AppConfig.mediaTag,
+  controller: mediaFeature.playerController,
+  ...
+);
 ```
 
 ## Notes / Tweaks

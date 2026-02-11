@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/config/app_config.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/init/screen/init_screen.dart';
@@ -8,9 +9,12 @@ import 'package:qms_revamped_content_desktop_client/core/init/service/init_servi
 import 'package:qms_revamped_content_desktop_client/core/init/view_model/init_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/logging_bootstrap.dart';
-import 'package:qms_revamped_content_desktop_client/core/server_properties/test/ui/screen/server_properties_dialog_stress_screen.dart';
+import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/test/ui/screen/server_properties_dialog_stress_screen.dart';
+import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent/currency_exchange_rate_feature.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/storage/directory/currency_exchange_rate_flag_storage_directory_service.dart';
+import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
 
 import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
@@ -40,18 +44,6 @@ Future<void> main() async {
                 AppDatabaseManager(appDirectoryService: context.read()),
           ),
 
-          // Init
-          Provider(
-            create: (context) => InitService(
-              eventManager: context.read(),
-              appDirectoryService: context.read(),
-              appDatabaseManager: context.read(),
-            ),
-          ),
-          ChangeNotifierProvider(
-            create: (context) => InitViewModel(initService: context.read()),
-          ),
-
           // Server properties
           Provider(
             create: (context) => ServerPropertiesRegistryService(
@@ -71,6 +63,83 @@ Future<void> main() async {
                 CurrencyExchangeRateFlagStorageDirectoryService(
                   appDirectoryService: context.read(),
                 ),
+          ),
+
+          // Features are app-lifetime singletons and initialized by InitService.
+          Provider<MediaFeature>(
+            create: (context) => MediaFeature.create(
+              serviceName: AppConfig.mediaServiceName,
+              tag: AppConfig.mediaTag,
+              eventManager: context.read<EventManager>(),
+              appDatabaseManager: context.read<AppDatabaseManager>(),
+              serverPropertiesRegistryService: context
+                  .read<ServerPropertiesRegistryService>(),
+              mediaStorageDirectoryService: context
+                  .read<MediaStorageDirectoryService>(),
+            ),
+            dispose: (context, feature) {
+              // ignore: discarded_futures
+              feature.agent.dispose();
+            },
+          ),
+          Provider<CurrencyExchangeRateFeature>(
+            create: (context) => CurrencyExchangeRateFeature.create(
+              serviceName: AppConfig.currencyExchangeRateServiceName,
+              tag: AppConfig.currencyExchangeRateTag,
+              eventManager: context.read<EventManager>(),
+              appDatabaseManager: context.read<AppDatabaseManager>(),
+              serverPropertiesRegistryService: context
+                  .read<ServerPropertiesRegistryService>(),
+              flagStorageDirectoryService: context
+                  .read<CurrencyExchangeRateFlagStorageDirectoryService>(),
+            ),
+            dispose: (context, feature) {
+              // ignore: discarded_futures
+              feature.agent.dispose();
+            },
+          ),
+          Provider<List<PositionUpdateSubscriber>>(
+            create: (context) => [
+              PositionUpdateSubscriber(
+                serviceName: AppConfig.mediaServiceName,
+                tag: AppConfig.mediaTag,
+                sseIncrementalMismatchCallback: (_) {},
+                eventManager: context.read<EventManager>(),
+                serverPropertiesRegistryService: context
+                    .read<ServerPropertiesRegistryService>(),
+              ),
+              PositionUpdateSubscriber(
+                serviceName: AppConfig.currencyExchangeRateServiceName,
+                tag: AppConfig.currencyExchangeRateTag,
+                sseIncrementalMismatchCallback: (_) {},
+                eventManager: context.read<EventManager>(),
+                serverPropertiesRegistryService: context
+                    .read<ServerPropertiesRegistryService>(),
+              ),
+            ],
+            dispose: (context, subscribers) {
+              for (final subscriber in subscribers) {
+                // ignore: discarded_futures
+                subscriber.dispose();
+              }
+            },
+          ),
+
+          // Init
+          Provider(
+            create: (context) => InitService(
+              eventManager: context.read<EventManager>(),
+              appDirectoryService: context.read<AppDirectoryService>(),
+              appDatabaseManager: context.read<AppDatabaseManager>(),
+              mediaFeature: context.read<MediaFeature>(),
+              currencyExchangeRateFeature: context
+                  .read<CurrencyExchangeRateFeature>(),
+              positionUpdateSubscribers: context
+                  .read<List<PositionUpdateSubscriber>>(),
+            ),
+          ),
+          ChangeNotifierProvider(
+            create: (context) => InitViewModel(initService: context.read()),
           ),
         ],
         child: const MyAppTwo(),

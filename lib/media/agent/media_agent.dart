@@ -72,8 +72,11 @@ class MediaAgent {
         _log.i(
           'AuthLoggedInEvent matched; initializing media (serviceName=$serviceName tag=$tag)',
         );
-        // Background task; reinit is idempotent.
-        unawaited(reinit(autoPlay: true, startSynchronizer: true));
+        _runReinitInBackground(
+          reason: 'auth_logged_in',
+          autoPlay: true,
+          startSynchronizer: true,
+        );
       },
       onError: (Object e, StackTrace st) {
         _log.e('Auth listener error', error: e, stackTrace: st);
@@ -88,7 +91,11 @@ class MediaAgent {
             _log.w(
               'Position SSE mismatch received; reloading media from backend (serviceName=$serviceName tag=$tag mismatch=${event.mismatch})',
             );
-            unawaited(reinit(autoPlay: false, startSynchronizer: false));
+            _runReinitInBackground(
+              reason: 'position_sse_mismatch',
+              autoPlay: false,
+              startSynchronizer: false,
+            );
           },
           onError: (Object e, StackTrace st) {
             _log.e(
@@ -101,7 +108,16 @@ class MediaAgent {
 
     final hasToken = await _authService.hasUsableAccessTokenNow();
     if (hasToken) {
-      await reinit(autoPlay: true, startSynchronizer: true);
+      try {
+        await reinit(autoPlay: false, startSynchronizer: true);
+      } catch (e, st) {
+        _log.e(
+          'Initial media reinit failed; continuing startup without fatal error '
+          '(serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
+        );
+      }
     }
   }
 
@@ -135,8 +151,35 @@ class MediaAgent {
     }
 
     if (autoPlay) {
-      await _playerController.play(reason: 'reinit');
+      try {
+        await _playerController.play(reason: 'reinit');
+      } catch (e, st) {
+        _log.e(
+          'Media autoplay failed during reinit; continuing without fatal error '
+          '(serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
+        );
+      }
     }
+  }
+
+  void _runReinitInBackground({
+    required String reason,
+    required bool autoPlay,
+    required bool startSynchronizer,
+  }) {
+    unawaited(() async {
+      try {
+        await reinit(autoPlay: autoPlay, startSynchronizer: startSynchronizer);
+      } catch (e, st) {
+        _log.e(
+          'Background media reinit failed (reason=$reason serviceName=$serviceName tag=$tag)',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }());
   }
 
   Future<void> dispose() async {

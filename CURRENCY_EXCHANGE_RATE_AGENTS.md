@@ -8,7 +8,7 @@ Implements a currency exchange rate feature that:
   `FLAG | COUNTRY NAME | CURRENCY_CODE | BUY | SELL`
 - keeps local DB in sync with backend CRUD SSE events
 - keeps local ordering in sync with position updates
-- follows media-style manual Provider injection + `EventManager` orchestration
+- uses app-level Provider wiring + `InitService` startup ordering
 
 This module should mirror the patterns in `MEDIA_AGENT.md` and
 `POSITION_UPDATE_SUBSCRIBER_AGENT.MD`.
@@ -17,6 +17,11 @@ This module should mirror the patterns in `MEDIA_AGENT.md` and
 
 - `serviceName`: identifies which server-properties row/token is used
 - `tag`: filtering key for list + subscriptions + local queries
+
+Current app constants:
+
+- `serviceName = AppConfig.currencyExchangeRateServiceName` (`currency_exchange_rate`)
+- `tag = AppConfig.currencyExchangeRateTag` (`main`)
 
 ## Backend Endpoints Used
 
@@ -115,7 +120,8 @@ Proposed module root: `lib/currency_exchange_rate/`
      delete row (+ optional orphan flag cleanup)
 6. Position updates:
    listen `PositionUpdatedEventDto` filtered by `tableName == serviceName` and `tag`,
-   call registry `updatePosition(UpdatePositionRequest)`.
+   map SSE `id`/`affectedRecordRows[].id` (remote ids) to local Drift row ids
+   by `(remoteId, tag)`, then call registry `updatePosition(UpdatePositionRequest)`.
 7. Mass position event:
    notify table controller/view to reload ordered list.
 
@@ -151,14 +157,14 @@ Dialog lifecycle note:
 - Reference implementation:
   `lib/core/server_properties/form/ui/view/server_properties_configuration_dialog.dart`
 
-## Provider Usage (Same Pattern as Media)
+## App Wiring (Same Pattern as Media)
 
-At screen level:
+At app startup:
 
-- provide `CurrencyExchangeRateFeature`
-- call `feature.agent.init()` in provider `create`
-- dispose via `feature.agent.dispose()`
-- provide `PositionUpdateSubscriber(serviceName, tag)` in same screen
+- create `CurrencyExchangeRateFeature` in `lib/main.dart`
+- create `PositionUpdateSubscriber` instances in `lib/main.dart`
+- run `subscriber.init()` and `feature.agent.init()` in `lib/core/init/service/init_service.dart`
+- keep `lib/main_screen.dart` as a pure consumer of provided instances
 
 Test harness target:
 
@@ -167,8 +173,8 @@ Test harness target:
 
 Fixed test constants:
 
-- `serviceName = 'main-currency-exchange-rate'`
-- `tag = 'main'`
+- `serviceName = AppConfig.currencyExchangeRateServiceName`
+- `tag = AppConfig.currencyExchangeRateTag`
 
 Field mapping:
 

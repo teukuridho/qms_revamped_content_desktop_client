@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qms_revamped_content_desktop_client/core/config/app_config.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
@@ -9,8 +10,8 @@ import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/stora
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/view/currency_exchange_rate_table_view.dart';
 
 class CurrencyExchangeRateTestScreen extends StatelessWidget {
-  static const String serviceName = 'main-currency-exchange-rate';
-  static const String tag = '';
+  static const String serviceName = AppConfig.currencyExchangeRateServiceName;
+  static const String tag = AppConfig.currencyExchangeRateTag;
 
   const CurrencyExchangeRateTestScreen({super.key});
 

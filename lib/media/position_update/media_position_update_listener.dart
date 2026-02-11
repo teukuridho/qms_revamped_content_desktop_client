@@ -34,34 +34,58 @@ class MediaPositionUpdateListener {
   }
 
   Future<void> _updatePosition(PositionUpdatedEventDto dto) async {
-    final id = dto.id;
+    final remoteId = dto.id;
     final newPosition = dto.newPosition;
-    if (id == null || newPosition == null) {
+    if (remoteId == null || newPosition == null) {
       _log.w(
         'Ignoring invalid PositionUpdatedEventDto (missing id/newPosition): $dto',
       );
       return;
     }
 
+    final rows = await _mediaRegistryService.getAllByTagOrdered(tag: tag);
+    final localIdByRemoteId = <int, int>{};
+    for (final row in rows) {
+      localIdByRemoteId[row.remoteId] = row.id;
+    }
+
+    final localId = localIdByRemoteId[remoteId];
+    if (localId == null) {
+      _log.w(
+        'Skipping position update: current remoteId=$remoteId not found locally (tag=$tag)',
+      );
+      return;
+    }
+
     final affectedRecords = <RecordWithPosition>[];
     for (final row in dto.affectedRecordRows) {
-      final rowId = row.id;
+      final rowRemoteId = row.id;
       final rowPosition = row.newPosition;
-      if (rowId == null || rowPosition == null) {
+      if (rowRemoteId == null || rowPosition == null) {
         _log.w('Skipping invalid affected record row in dto: $row');
         continue;
       }
-      affectedRecords.add(RecordWithPosition(id: rowId, position: rowPosition));
+      final affectedLocalId = localIdByRemoteId[rowRemoteId];
+      if (affectedLocalId == null) {
+        _log.w(
+          'Skipping affected record: remoteId=$rowRemoteId not found locally (tag=$tag)',
+        );
+        continue;
+      }
+      affectedRecords.add(
+        RecordWithPosition(id: affectedLocalId, position: rowPosition),
+      );
     }
 
     _log.i(
-      'Position update received; updating local registry (id=$id newPosition=$newPosition affected=${affectedRecords.length})',
+      'Position update received; updating local registry '
+      '(remoteId=$remoteId localId=$localId newPosition=$newPosition affected=${affectedRecords.length})',
     );
 
     try {
       await _mediaRegistryService.updatePosition(
         UpdatePositionRequest(
-          currentRecord: RecordWithPosition(id: id, position: newPosition),
+          currentRecord: RecordWithPosition(id: localId, position: newPosition),
           affectedRecords: affectedRecords,
         ),
       );

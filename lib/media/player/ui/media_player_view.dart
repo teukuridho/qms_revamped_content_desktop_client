@@ -45,6 +45,11 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
     super.initState();
 
     widget.controller.init();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.controller.playing) return;
+      unawaited(widget.controller.play(reason: 'view_mounted_autoplay'));
+    });
 
     _dlStartSub = widget.eventManager
         .listen<MediaDownloadStartedEvent>()
