@@ -143,12 +143,12 @@ class MediaAgent {
       'reinit(startSynchronizer=$startSynchronizer autoPlay=$autoPlay serviceName=$serviceName tag=$tag)',
     );
 
-    await _downloader.downloadAll();
-    await _playerController.loadFromDatabase();
-
     if (startSynchronizer) {
       _synchronizer.start();
     }
+
+    await _downloader.downloadAll();
+    await _playerController.loadFromDatabase();
 
     if (autoPlay) {
       try {

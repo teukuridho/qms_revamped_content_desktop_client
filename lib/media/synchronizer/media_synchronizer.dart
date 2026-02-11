@@ -17,6 +17,7 @@ typedef SseClientFactory = SseClientBase Function(SseClientOptions options);
 
 class MediaSynchronizer {
   static Duration retryDelay = const Duration(seconds: 3);
+  static Duration weakSseIdRefreshCooldown = const Duration(seconds: 30);
 
   static const String uploadedFieldKey = 'media-uploaded';
   static const String deletedFieldKey = 'media-deleted';
@@ -40,6 +41,7 @@ class MediaSynchronizer {
   bool _disposed = false;
   int _generation = 0;
   bool _fullRefreshInFlight = false;
+  DateTime? _lastWeakSseIdRefreshAt;
 
   MediaSynchronizer({
     required this.serviceName,
@@ -168,6 +170,7 @@ class MediaSynchronizer {
       'Subscribing media SSE: $subscribeUri (serviceName=$serviceName tag=$tag)',
     );
 
+    var seenConnectedLog = false;
     final client = _sseClientFactory(
       SseClientOptions(
         url: subscribeUri,
@@ -192,6 +195,18 @@ class MediaSynchronizer {
               );
               break;
           }
+
+          if (level == SseClientLogLevel.info &&
+              message.startsWith('connected(')) {
+            if (seenConnectedLog) {
+              MediaSynchronizerLogger.warn(
+                'Media SSE reconnected; forcing full refresh '
+                '(serviceName=$serviceName tag=$tag)',
+              );
+              unawaited(_refreshFromBackend(reason: 'sse_reconnected'));
+            }
+            seenConnectedLog = true;
+          }
         },
         enableSseIncrementalIdMismatch: true,
         shouldRefreshWhenIdMismatch: true,
@@ -209,7 +224,8 @@ class MediaSynchronizer {
 
     final f1 = _processUploaded(gen, client);
     final f2 = _processDeleted(gen, client);
-    await Future.any([f1, f2]);
+    final f3 = _monitorCrudFrameIdHealth(gen, client);
+    await Future.any([f1, f2, f3]);
   }
 
   Future<void> _processUploaded(int gen, SseClientBase client) async {
@@ -267,6 +283,62 @@ class MediaSynchronizer {
         );
       }
     }
+  }
+
+  Future<void> _monitorCrudFrameIdHealth(int gen, SseClientBase client) async {
+    int? lastNumericId;
+    await for (final frame in client.frames) {
+      if (_disposed || gen != _generation) break;
+      if (!_isCrudFrame(frame)) continue;
+
+      final rawId = frame.id;
+      final parsedId = (rawId == null || rawId.isEmpty)
+          ? null
+          : int.tryParse(rawId);
+      if (parsedId == null) {
+        _scheduleWeakSseIdRefresh(
+          reason: 'sse_id_missing_or_non_numeric',
+          details: 'rawId=$rawId',
+        );
+        continue;
+      }
+
+      if (lastNumericId != null && parsedId != (lastNumericId + 1)) {
+        _scheduleWeakSseIdRefresh(
+          reason: 'sse_id_non_incremental',
+          details: 'expected=${lastNumericId + 1} actual=$parsedId',
+        );
+      }
+      lastNumericId = parsedId;
+    }
+  }
+
+  bool _isCrudFrame(SseFrame frame) {
+    final event = frame.event;
+    if (event == uploadedFieldKey || event == deletedFieldKey) {
+      return true;
+    }
+
+    return frame.fields.containsKey(uploadedFieldKey) ||
+        frame.fields.containsKey(deletedFieldKey);
+  }
+
+  void _scheduleWeakSseIdRefresh({
+    required String reason,
+    required String details,
+  }) {
+    final now = DateTime.now();
+    final last = _lastWeakSseIdRefreshAt;
+    if (last != null && now.difference(last) < weakSseIdRefreshCooldown) {
+      return;
+    }
+    _lastWeakSseIdRefreshAt = now;
+
+    MediaSynchronizerLogger.warn(
+      'Weak SSE id health detected; forcing full refresh '
+      '(serviceName=$serviceName tag=$tag reason=$reason details=$details)',
+    );
+    unawaited(_refreshFromBackend(reason: reason));
   }
 
   Uri _buildSubscribeUri(Uri baseUri) {
