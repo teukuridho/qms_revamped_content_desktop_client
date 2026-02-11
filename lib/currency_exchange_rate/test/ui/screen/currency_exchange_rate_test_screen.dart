@@ -10,7 +10,7 @@ import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/view/
 
 class CurrencyExchangeRateTestScreen extends StatelessWidget {
   static const String serviceName = 'main-currency-exchange-rate';
-  static const String tag = 'main';
+  static const String tag = '';
 
   const CurrencyExchangeRateTestScreen({super.key});
 

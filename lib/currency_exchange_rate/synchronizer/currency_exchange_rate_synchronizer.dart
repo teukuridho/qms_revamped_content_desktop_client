@@ -202,6 +202,7 @@ class CurrencyExchangeRateSynchronizer {
 
     _sseClient = client;
     await client.start();
+    await _refreshFromBackend(reason: 'sse_connected');
 
     final f1 = _processCreated(gen, client);
     final f2 = _processUpdated(gen, client);
@@ -212,6 +213,7 @@ class CurrencyExchangeRateSynchronizer {
   Future<void> _processCreated(int gen, SseClientBase client) async {
     await for (final raw in client.listenJson(createdFieldKey)) {
       if (_disposed || gen != _generation) break;
+      CurrencyExchangeRateSynchronizerLogger.debug('Created raw payload: $raw');
 
       CurrencyExchangeRateCreatedEventDto? dto;
       try {
@@ -247,6 +249,7 @@ class CurrencyExchangeRateSynchronizer {
   Future<void> _processUpdated(int gen, SseClientBase client) async {
     await for (final raw in client.listenJson(updatedFieldKey)) {
       if (_disposed || gen != _generation) break;
+      CurrencyExchangeRateSynchronizerLogger.debug('Updated raw payload: $raw');
 
       CurrencyExchangeRateUpdatedEventDto? dto;
       try {
@@ -282,6 +285,7 @@ class CurrencyExchangeRateSynchronizer {
   Future<void> _processDeleted(int gen, SseClientBase client) async {
     await for (final raw in client.listenJson(deletedFieldKey)) {
       if (_disposed || gen != _generation) break;
+      CurrencyExchangeRateSynchronizerLogger.debug('Deleted raw payload: $raw');
 
       CurrencyExchangeRateDeletedEventDto? dto;
       try {
@@ -316,13 +320,12 @@ class CurrencyExchangeRateSynchronizer {
   Uri _buildSubscribeUri(Uri baseUri) {
     final segments = <String>[
       ...baseUri.pathSegments.where((e) => e.isNotEmpty),
-      'position-updated-subscribe',
+      'currency-exchange-rate-subscribe',
     ];
 
-    return baseUri.replace(
-      pathSegments: segments,
-      queryParameters: <String, String>{'tableName': serviceName, 'tag': tag},
-    );
+    // Backend contract for currency CRUD events uses this endpoint directly.
+    // DTO payloads are parsed from created/updated/deleted SSE fields.
+    return baseUri.replace(pathSegments: segments);
   }
 
   Future<void> _closeSseClient() async {

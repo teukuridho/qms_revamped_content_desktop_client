@@ -27,8 +27,8 @@ This module should mirror the patterns in `MEDIA_AGENT.md` and
 - Position subscribe (already existing infra):
   `GET {serverAddress}/position-updated-subscribe?tableName={serviceName}&tag={tag}`
 - CRUD subscribe (requirement from product spec):
-  `GET {serverAddress}/position-updated-subscribe?tableName={serviceName}&tag={tag}`
-  (same endpoint, parse currency CRUD events from SSE fields)
+  `GET {serverAddress}/currency-exchange-rate-subscribe`
+  (parse currency CRUD events from SSE fields)
 
 OpenAPI references:
 
