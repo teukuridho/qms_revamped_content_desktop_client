@@ -73,6 +73,8 @@ SSE fields:
 ## Position Update Flow
 
 1. `PositionUpdateSubscriber` publishes `PositionUpdatedEventDto`.
+   On SSE incremental `id:` mismatch it also publishes
+   `PositionUpdateSseIdMismatchEvent`.
 2. `MediaPositionUpdateListener` filters by `tableName == serviceName` and
    `tag == tag`, then calls
    `MediaRegistryService.updatePosition(UpdatePositionRequest)`.
@@ -82,9 +84,11 @@ SSE fields:
 5. `MediaPlayerController` reloads from DB when playlist reaches the last item,
    so new positions are applied without interrupting current playback.
 
-If position SSE detects incremental `id:` mismatch, the screen callback should
-trigger `MediaAgent.reinit(...)` to recover from potential missed position
-events.
+Mismatch recovery:
+
+- `MediaAgent` listens `PositionUpdateSseIdMismatchEvent` and, when
+  `serviceName/tag` match, runs `reinit(autoPlay: false, startSynchronizer: false)`
+  to reload medias from backend and refresh playlist without restarting playback.
 
 ## Initial Refresh Behavior
 

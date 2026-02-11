@@ -43,11 +43,9 @@ class MediaTestScreen extends StatelessWidget {
           create: (context) => PositionUpdateSubscriber(
             serviceName: serviceName,
             tag: tag,
-            sseIncrementalMismatchCallback: (_) {
-              final feature = context.read<MediaFeature>();
-              // ignore: discarded_futures
-              feature.agent.reinit(autoPlay: true, startSynchronizer: true);
-            },
+            // MediaAgent listens PositionUpdateSseIdMismatchEvent and handles
+            // backend reload for matching serviceName/tag.
+            sseIncrementalMismatchCallback: (_) {},
             eventManager: context.read<EventManager>(),
             serverPropertiesRegistryService: context
                 .read<ServerPropertiesRegistryService>(),
