@@ -6,6 +6,7 @@ import 'package:qms_revamped_content_desktop_client/core/event_manager/event_man
 import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/media/downloader/media_downloader.dart';
 import 'package:qms_revamped_content_desktop_client/media/player/controller/media_player_controller.dart';
+import 'package:qms_revamped_content_desktop_client/media/position_update/media_mass_position_updated_event_listener.dart';
 import 'package:qms_revamped_content_desktop_client/media/position_update/media_position_update_listener.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/synchronizer/media_synchronizer.dart';
@@ -23,6 +24,7 @@ class MediaAgent {
   final MediaPlayerController _playerController;
   final MediaSynchronizer _synchronizer;
   final MediaPositionUpdateListener _positionUpdateListener;
+  final MediaMassPositionUpdatedEventListener _massPositionUpdatedEventListener;
 
   StreamSubscription<AuthLoggedInEvent>? _authSub;
   bool _disposed = false;
@@ -39,13 +41,16 @@ class MediaAgent {
     required MediaPlayerController playerController,
     required MediaSynchronizer synchronizer,
     required MediaPositionUpdateListener positionUpdateListener,
+    required MediaMassPositionUpdatedEventListener
+    massPositionUpdatedEventListener,
   }) : _eventManager = eventManager,
        _mediaStorageDirectoryService = mediaStorageDirectoryService,
        _authService = authService,
        _downloader = downloader,
        _playerController = playerController,
        _synchronizer = synchronizer,
-       _positionUpdateListener = positionUpdateListener;
+       _positionUpdateListener = positionUpdateListener,
+       _massPositionUpdatedEventListener = massPositionUpdatedEventListener;
 
   MediaPlayerController get playerController => _playerController;
 
@@ -56,6 +61,7 @@ class MediaAgent {
     await _playerController.init();
     _synchronizer.init();
     _positionUpdateListener.init();
+    _massPositionUpdatedEventListener.init();
 
     _authSub ??= _eventManager.listen<AuthLoggedInEvent>().listen(
       (event) {
@@ -121,6 +127,7 @@ class MediaAgent {
 
     await _synchronizer.dispose();
     await _positionUpdateListener.dispose();
+    await _massPositionUpdatedEventListener.dispose();
 
     // ChangeNotifier dispose is sync; this is best-effort.
     // ignore: discarded_futures

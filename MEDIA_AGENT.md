@@ -6,7 +6,8 @@ Implements a media feature that:
 - stores files locally under the app directory
 - plays a playlist (video via `media_kit`, image via `Image.file`)
 - synchronizes changes via SSE (`media-uploaded`, `media-deleted`)
-- reorders on position updates (via `PositionUpdatedEventDto`)
+- reorders on position updates (via `PositionUpdatedEventDto` -> local registry update)
+- reloads playlist order at end-of-loop after mass position changes
 
 This module follows the same patterns as `POSITION_UPDATE_SUBSCRIBER_AGENT.MD`:
 
@@ -50,7 +51,21 @@ SSE fields:
   - Events: `lib/media/player/event/*`
 - Synchronizer (SSE): `lib/media/synchronizer/media_synchronizer.dart`
 - Position update listener: `lib/media/position_update/media_position_update_listener.dart`
+- Mass position listener:
+  `lib/media/position_update/media_mass_position_updated_event_listener.dart`
 - Deleter: `lib/media/storage/service/media_deleter.dart`
+
+## Position Update Flow
+
+1. `PositionUpdateSubscriber` publishes `PositionUpdatedEventDto`.
+2. `MediaPositionUpdateListener` filters by `tableName == serviceName` and
+   `tag == tag`, then calls
+   `MediaRegistryService.updatePosition(UpdatePositionRequest)`.
+3. `MediaRegistryService` updates local media positions and publishes
+   `MediaMassPositionUpdatedEvent`.
+4. `MediaMassPositionUpdatedEventListener` marks media reload needed.
+5. `MediaPlayerController` reloads from DB when playlist reaches the last item,
+   so new positions are applied without interrupting current playback.
 
 ## Event Bus Contracts
 

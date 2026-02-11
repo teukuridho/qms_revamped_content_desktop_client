@@ -5,6 +5,7 @@ import 'package:qms_revamped_content_desktop_client/core/server_properties/regis
 import 'package:qms_revamped_content_desktop_client/media/agent/media_agent.dart';
 import 'package:qms_revamped_content_desktop_client/media/downloader/media_downloader.dart';
 import 'package:qms_revamped_content_desktop_client/media/player/controller/media_player_controller.dart';
+import 'package:qms_revamped_content_desktop_client/media/position_update/media_mass_position_updated_event_listener.dart';
 import 'package:qms_revamped_content_desktop_client/media/position_update/media_position_update_listener.dart';
 import 'package:qms_revamped_content_desktop_client/media/registry/service/media_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
@@ -22,6 +23,7 @@ class MediaFeature {
   final MediaDeleter deleter;
   final MediaSynchronizer synchronizer;
   final MediaPositionUpdateListener positionUpdateListener;
+  final MediaMassPositionUpdatedEventListener massPositionUpdatedEventListener;
   final MediaAgent agent;
 
   MediaFeature._({
@@ -32,6 +34,7 @@ class MediaFeature {
     required this.deleter,
     required this.synchronizer,
     required this.positionUpdateListener,
+    required this.massPositionUpdatedEventListener,
     required this.agent,
   });
 
@@ -91,8 +94,16 @@ class MediaFeature {
       serviceName: serviceName,
       tag: tag,
       eventManager: eventManager,
-      playerController: playerController,
+      mediaRegistryService: registryService,
     );
+
+    final massPositionUpdatedEventListener =
+        MediaMassPositionUpdatedEventListener(
+          serviceName: serviceName,
+          tag: tag,
+          eventManager: eventManager,
+          reloadSignal: playerController,
+        );
 
     final authService = OidcAuthService(
       serviceName: serviceName,
@@ -110,6 +121,7 @@ class MediaFeature {
       playerController: playerController,
       synchronizer: synchronizer,
       positionUpdateListener: positionUpdateListener,
+      massPositionUpdatedEventListener: massPositionUpdatedEventListener,
     );
 
     return MediaFeature._(
@@ -120,6 +132,7 @@ class MediaFeature {
       deleter: deleter,
       synchronizer: synchronizer,
       positionUpdateListener: positionUpdateListener,
+      massPositionUpdatedEventListener: massPositionUpdatedEventListener,
       agent: agent,
     );
   }

@@ -139,12 +139,10 @@ class MediaRegistryService {
     _log.d(
       'updatePosition(currentId=${request.currentRecord.id} affected=${request.affectedRecords.length})',
     );
-    List<RecordWithPosition> toUpdate = [...request.affectedRecords];
+    final toUpdate = <RecordWithPosition>[...request.affectedRecords];
     toUpdate.add(request.currentRecord);
 
-    _updateMassPositions(toUpdate);
-
-    return;
+    await _updateMassPositions(toUpdate);
   }
 
   Future<void> _updateMassPositions(List<RecordWithPosition> list) async {
@@ -154,9 +152,8 @@ class MediaRegistryService {
       (await ((appDatabase.update(appDatabase.media)
             ..where((e) => e.id.equals(record.id)))
           .write(MediaCompanion(position: Value(record.position)))));
-
-      _eventManager.publishEvent(MediaMassPositionUpdatedEvent(list: list));
     }
+    _eventManager.publishEvent(MediaMassPositionUpdatedEvent(list: list));
   }
 
   Future<void> delete(int id) async {
