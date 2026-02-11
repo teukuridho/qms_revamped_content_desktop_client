@@ -9,21 +9,21 @@ import 'package:qms_revamped_content_desktop_client/core/init/view_model/init_vi
 import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/logging_bootstrap.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/storage/directory/currency_exchange_rate_flag_storage_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
 
-import 'package:media_kit/media_kit.dart';                      // Provides [Player], [Media], [Playlist] etc.
+import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
+  LoggingBootstrap.runZoned<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    MediaKit.ensureInitialized();
 
-  await LoggingBootstrap.init();
+    await LoggingBootstrap.init();
 
+    final log = AppLog.root.child('main');
+    log.i('App starting');
 
-  final log = AppLog.root.child('main');
-  log.i('App starting');
-
-  LoggingBootstrap.runZoned<void>(() {
     runApp(
       MultiProvider(
         providers: [
@@ -64,6 +64,12 @@ Future<void> main() async {
             create: (context) => MediaStorageDirectoryService(
               appDirectoryService: context.read(),
             ),
+          ),
+          Provider(
+            create: (context) =>
+                CurrencyExchangeRateFlagStorageDirectoryService(
+                  appDirectoryService: context.read(),
+                ),
           ),
         ],
         child: const MyAppTwo(),

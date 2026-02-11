@@ -1180,6 +1180,624 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
   }
 }
 
+class $CurrencyExchangeRatesTable extends CurrencyExchangeRates
+    with TableInfo<$CurrencyExchangeRatesTable, CurrencyExchangeRate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CurrencyExchangeRatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<int> remoteId = GeneratedColumn<int>(
+    'remote_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _flagImageIdMeta = const VerificationMeta(
+    'flagImageId',
+  );
+  @override
+  late final GeneratedColumn<int> flagImageId = GeneratedColumn<int>(
+    'flag_image_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _flagImagePathMeta = const VerificationMeta(
+    'flagImagePath',
+  );
+  @override
+  late final GeneratedColumn<String> flagImagePath = GeneratedColumn<String>(
+    'flag_image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _countryNameMeta = const VerificationMeta(
+    'countryName',
+  );
+  @override
+  late final GeneratedColumn<String> countryName = GeneratedColumn<String>(
+    'country_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _buyMeta = const VerificationMeta('buy');
+  @override
+  late final GeneratedColumn<int> buy = GeneratedColumn<int>(
+    'buy',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sellMeta = const VerificationMeta('sell');
+  @override
+  late final GeneratedColumn<int> sell = GeneratedColumn<int>(
+    'sell',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tagMeta = const VerificationMeta('tag');
+  @override
+  late final GeneratedColumn<String> tag = GeneratedColumn<String>(
+    'tag',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    remoteId,
+    flagImageId,
+    flagImagePath,
+    countryName,
+    currencyCode,
+    buy,
+    sell,
+    position,
+    tag,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'currency_exchange_rates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CurrencyExchangeRate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_remoteIdMeta);
+    }
+    if (data.containsKey('flag_image_id')) {
+      context.handle(
+        _flagImageIdMeta,
+        flagImageId.isAcceptableOrUnknown(
+          data['flag_image_id']!,
+          _flagImageIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('flag_image_path')) {
+      context.handle(
+        _flagImagePathMeta,
+        flagImagePath.isAcceptableOrUnknown(
+          data['flag_image_path']!,
+          _flagImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('country_name')) {
+      context.handle(
+        _countryNameMeta,
+        countryName.isAcceptableOrUnknown(
+          data['country_name']!,
+          _countryNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_countryNameMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyCodeMeta);
+    }
+    if (data.containsKey('buy')) {
+      context.handle(
+        _buyMeta,
+        buy.isAcceptableOrUnknown(data['buy']!, _buyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_buyMeta);
+    }
+    if (data.containsKey('sell')) {
+      context.handle(
+        _sellMeta,
+        sell.isAcceptableOrUnknown(data['sell']!, _sellMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sellMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('tag')) {
+      context.handle(
+        _tagMeta,
+        tag.isAcceptableOrUnknown(data['tag']!, _tagMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tagMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CurrencyExchangeRate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CurrencyExchangeRate(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}remote_id'],
+      )!,
+      flagImageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}flag_image_id'],
+      ),
+      flagImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flag_image_path'],
+      ),
+      countryName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}country_name'],
+      )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      buy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}buy'],
+      )!,
+      sell: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sell'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      tag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag'],
+      )!,
+    );
+  }
+
+  @override
+  $CurrencyExchangeRatesTable createAlias(String alias) {
+    return $CurrencyExchangeRatesTable(attachedDatabase, alias);
+  }
+}
+
+class CurrencyExchangeRate extends DataClass
+    implements Insertable<CurrencyExchangeRate> {
+  final int id;
+  final int remoteId;
+  final int? flagImageId;
+  final String? flagImagePath;
+  final String countryName;
+  final String currencyCode;
+  final int buy;
+  final int sell;
+  final int position;
+  final String tag;
+  const CurrencyExchangeRate({
+    required this.id,
+    required this.remoteId,
+    this.flagImageId,
+    this.flagImagePath,
+    required this.countryName,
+    required this.currencyCode,
+    required this.buy,
+    required this.sell,
+    required this.position,
+    required this.tag,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['remote_id'] = Variable<int>(remoteId);
+    if (!nullToAbsent || flagImageId != null) {
+      map['flag_image_id'] = Variable<int>(flagImageId);
+    }
+    if (!nullToAbsent || flagImagePath != null) {
+      map['flag_image_path'] = Variable<String>(flagImagePath);
+    }
+    map['country_name'] = Variable<String>(countryName);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['buy'] = Variable<int>(buy);
+    map['sell'] = Variable<int>(sell);
+    map['position'] = Variable<int>(position);
+    map['tag'] = Variable<String>(tag);
+    return map;
+  }
+
+  CurrencyExchangeRatesCompanion toCompanion(bool nullToAbsent) {
+    return CurrencyExchangeRatesCompanion(
+      id: Value(id),
+      remoteId: Value(remoteId),
+      flagImageId: flagImageId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flagImageId),
+      flagImagePath: flagImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flagImagePath),
+      countryName: Value(countryName),
+      currencyCode: Value(currencyCode),
+      buy: Value(buy),
+      sell: Value(sell),
+      position: Value(position),
+      tag: Value(tag),
+    );
+  }
+
+  factory CurrencyExchangeRate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CurrencyExchangeRate(
+      id: serializer.fromJson<int>(json['id']),
+      remoteId: serializer.fromJson<int>(json['remoteId']),
+      flagImageId: serializer.fromJson<int?>(json['flagImageId']),
+      flagImagePath: serializer.fromJson<String?>(json['flagImagePath']),
+      countryName: serializer.fromJson<String>(json['countryName']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      buy: serializer.fromJson<int>(json['buy']),
+      sell: serializer.fromJson<int>(json['sell']),
+      position: serializer.fromJson<int>(json['position']),
+      tag: serializer.fromJson<String>(json['tag']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'remoteId': serializer.toJson<int>(remoteId),
+      'flagImageId': serializer.toJson<int?>(flagImageId),
+      'flagImagePath': serializer.toJson<String?>(flagImagePath),
+      'countryName': serializer.toJson<String>(countryName),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'buy': serializer.toJson<int>(buy),
+      'sell': serializer.toJson<int>(sell),
+      'position': serializer.toJson<int>(position),
+      'tag': serializer.toJson<String>(tag),
+    };
+  }
+
+  CurrencyExchangeRate copyWith({
+    int? id,
+    int? remoteId,
+    Value<int?> flagImageId = const Value.absent(),
+    Value<String?> flagImagePath = const Value.absent(),
+    String? countryName,
+    String? currencyCode,
+    int? buy,
+    int? sell,
+    int? position,
+    String? tag,
+  }) => CurrencyExchangeRate(
+    id: id ?? this.id,
+    remoteId: remoteId ?? this.remoteId,
+    flagImageId: flagImageId.present ? flagImageId.value : this.flagImageId,
+    flagImagePath: flagImagePath.present
+        ? flagImagePath.value
+        : this.flagImagePath,
+    countryName: countryName ?? this.countryName,
+    currencyCode: currencyCode ?? this.currencyCode,
+    buy: buy ?? this.buy,
+    sell: sell ?? this.sell,
+    position: position ?? this.position,
+    tag: tag ?? this.tag,
+  );
+  CurrencyExchangeRate copyWithCompanion(CurrencyExchangeRatesCompanion data) {
+    return CurrencyExchangeRate(
+      id: data.id.present ? data.id.value : this.id,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      flagImageId: data.flagImageId.present
+          ? data.flagImageId.value
+          : this.flagImageId,
+      flagImagePath: data.flagImagePath.present
+          ? data.flagImagePath.value
+          : this.flagImagePath,
+      countryName: data.countryName.present
+          ? data.countryName.value
+          : this.countryName,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      buy: data.buy.present ? data.buy.value : this.buy,
+      sell: data.sell.present ? data.sell.value : this.sell,
+      position: data.position.present ? data.position.value : this.position,
+      tag: data.tag.present ? data.tag.value : this.tag,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurrencyExchangeRate(')
+          ..write('id: $id, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('flagImageId: $flagImageId, ')
+          ..write('flagImagePath: $flagImagePath, ')
+          ..write('countryName: $countryName, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('buy: $buy, ')
+          ..write('sell: $sell, ')
+          ..write('position: $position, ')
+          ..write('tag: $tag')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    remoteId,
+    flagImageId,
+    flagImagePath,
+    countryName,
+    currencyCode,
+    buy,
+    sell,
+    position,
+    tag,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CurrencyExchangeRate &&
+          other.id == this.id &&
+          other.remoteId == this.remoteId &&
+          other.flagImageId == this.flagImageId &&
+          other.flagImagePath == this.flagImagePath &&
+          other.countryName == this.countryName &&
+          other.currencyCode == this.currencyCode &&
+          other.buy == this.buy &&
+          other.sell == this.sell &&
+          other.position == this.position &&
+          other.tag == this.tag);
+}
+
+class CurrencyExchangeRatesCompanion
+    extends UpdateCompanion<CurrencyExchangeRate> {
+  final Value<int> id;
+  final Value<int> remoteId;
+  final Value<int?> flagImageId;
+  final Value<String?> flagImagePath;
+  final Value<String> countryName;
+  final Value<String> currencyCode;
+  final Value<int> buy;
+  final Value<int> sell;
+  final Value<int> position;
+  final Value<String> tag;
+  const CurrencyExchangeRatesCompanion({
+    this.id = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.flagImageId = const Value.absent(),
+    this.flagImagePath = const Value.absent(),
+    this.countryName = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.buy = const Value.absent(),
+    this.sell = const Value.absent(),
+    this.position = const Value.absent(),
+    this.tag = const Value.absent(),
+  });
+  CurrencyExchangeRatesCompanion.insert({
+    this.id = const Value.absent(),
+    required int remoteId,
+    this.flagImageId = const Value.absent(),
+    this.flagImagePath = const Value.absent(),
+    required String countryName,
+    required String currencyCode,
+    required int buy,
+    required int sell,
+    required int position,
+    required String tag,
+  }) : remoteId = Value(remoteId),
+       countryName = Value(countryName),
+       currencyCode = Value(currencyCode),
+       buy = Value(buy),
+       sell = Value(sell),
+       position = Value(position),
+       tag = Value(tag);
+  static Insertable<CurrencyExchangeRate> custom({
+    Expression<int>? id,
+    Expression<int>? remoteId,
+    Expression<int>? flagImageId,
+    Expression<String>? flagImagePath,
+    Expression<String>? countryName,
+    Expression<String>? currencyCode,
+    Expression<int>? buy,
+    Expression<int>? sell,
+    Expression<int>? position,
+    Expression<String>? tag,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (flagImageId != null) 'flag_image_id': flagImageId,
+      if (flagImagePath != null) 'flag_image_path': flagImagePath,
+      if (countryName != null) 'country_name': countryName,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (buy != null) 'buy': buy,
+      if (sell != null) 'sell': sell,
+      if (position != null) 'position': position,
+      if (tag != null) 'tag': tag,
+    });
+  }
+
+  CurrencyExchangeRatesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? remoteId,
+    Value<int?>? flagImageId,
+    Value<String?>? flagImagePath,
+    Value<String>? countryName,
+    Value<String>? currencyCode,
+    Value<int>? buy,
+    Value<int>? sell,
+    Value<int>? position,
+    Value<String>? tag,
+  }) {
+    return CurrencyExchangeRatesCompanion(
+      id: id ?? this.id,
+      remoteId: remoteId ?? this.remoteId,
+      flagImageId: flagImageId ?? this.flagImageId,
+      flagImagePath: flagImagePath ?? this.flagImagePath,
+      countryName: countryName ?? this.countryName,
+      currencyCode: currencyCode ?? this.currencyCode,
+      buy: buy ?? this.buy,
+      sell: sell ?? this.sell,
+      position: position ?? this.position,
+      tag: tag ?? this.tag,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<int>(remoteId.value);
+    }
+    if (flagImageId.present) {
+      map['flag_image_id'] = Variable<int>(flagImageId.value);
+    }
+    if (flagImagePath.present) {
+      map['flag_image_path'] = Variable<String>(flagImagePath.value);
+    }
+    if (countryName.present) {
+      map['country_name'] = Variable<String>(countryName.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (buy.present) {
+      map['buy'] = Variable<int>(buy.value);
+    }
+    if (sell.present) {
+      map['sell'] = Variable<int>(sell.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (tag.present) {
+      map['tag'] = Variable<String>(tag.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurrencyExchangeRatesCompanion(')
+          ..write('id: $id, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('flagImageId: $flagImageId, ')
+          ..write('flagImagePath: $flagImagePath, ')
+          ..write('countryName: $countryName, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('buy: $buy, ')
+          ..write('sell: $sell, ')
+          ..write('position: $position, ')
+          ..write('tag: $tag')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1187,11 +1805,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ServerPropertiesTable serverProperties = $ServerPropertiesTable(
     this,
   );
+  late final $CurrencyExchangeRatesTable currencyExchangeRates =
+      $CurrencyExchangeRatesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [media, serverProperties];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    media,
+    serverProperties,
+    currencyExchangeRates,
+  ];
 }
 
 typedef $$MediaTableCreateCompanionBuilder =
@@ -1774,6 +2398,322 @@ typedef $$ServerPropertiesTableProcessedTableManager =
       ServerProperty,
       PrefetchHooks Function()
     >;
+typedef $$CurrencyExchangeRatesTableCreateCompanionBuilder =
+    CurrencyExchangeRatesCompanion Function({
+      Value<int> id,
+      required int remoteId,
+      Value<int?> flagImageId,
+      Value<String?> flagImagePath,
+      required String countryName,
+      required String currencyCode,
+      required int buy,
+      required int sell,
+      required int position,
+      required String tag,
+    });
+typedef $$CurrencyExchangeRatesTableUpdateCompanionBuilder =
+    CurrencyExchangeRatesCompanion Function({
+      Value<int> id,
+      Value<int> remoteId,
+      Value<int?> flagImageId,
+      Value<String?> flagImagePath,
+      Value<String> countryName,
+      Value<String> currencyCode,
+      Value<int> buy,
+      Value<int> sell,
+      Value<int> position,
+      Value<String> tag,
+    });
+
+class $$CurrencyExchangeRatesTableFilterComposer
+    extends Composer<_$AppDatabase, $CurrencyExchangeRatesTable> {
+  $$CurrencyExchangeRatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get flagImageId => $composableBuilder(
+    column: $table.flagImageId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get flagImagePath => $composableBuilder(
+    column: $table.flagImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get countryName => $composableBuilder(
+    column: $table.countryName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get buy => $composableBuilder(
+    column: $table.buy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sell => $composableBuilder(
+    column: $table.sell,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tag => $composableBuilder(
+    column: $table.tag,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CurrencyExchangeRatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CurrencyExchangeRatesTable> {
+  $$CurrencyExchangeRatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get flagImageId => $composableBuilder(
+    column: $table.flagImageId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get flagImagePath => $composableBuilder(
+    column: $table.flagImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get countryName => $composableBuilder(
+    column: $table.countryName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get buy => $composableBuilder(
+    column: $table.buy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sell => $composableBuilder(
+    column: $table.sell,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tag => $composableBuilder(
+    column: $table.tag,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CurrencyExchangeRatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CurrencyExchangeRatesTable> {
+  $$CurrencyExchangeRatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<int> get flagImageId => $composableBuilder(
+    column: $table.flagImageId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get flagImagePath => $composableBuilder(
+    column: $table.flagImagePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get countryName => $composableBuilder(
+    column: $table.countryName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get buy =>
+      $composableBuilder(column: $table.buy, builder: (column) => column);
+
+  GeneratedColumn<int> get sell =>
+      $composableBuilder(column: $table.sell, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get tag =>
+      $composableBuilder(column: $table.tag, builder: (column) => column);
+}
+
+class $$CurrencyExchangeRatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CurrencyExchangeRatesTable,
+          CurrencyExchangeRate,
+          $$CurrencyExchangeRatesTableFilterComposer,
+          $$CurrencyExchangeRatesTableOrderingComposer,
+          $$CurrencyExchangeRatesTableAnnotationComposer,
+          $$CurrencyExchangeRatesTableCreateCompanionBuilder,
+          $$CurrencyExchangeRatesTableUpdateCompanionBuilder,
+          (
+            CurrencyExchangeRate,
+            BaseReferences<
+              _$AppDatabase,
+              $CurrencyExchangeRatesTable,
+              CurrencyExchangeRate
+            >,
+          ),
+          CurrencyExchangeRate,
+          PrefetchHooks Function()
+        > {
+  $$CurrencyExchangeRatesTableTableManager(
+    _$AppDatabase db,
+    $CurrencyExchangeRatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CurrencyExchangeRatesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CurrencyExchangeRatesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CurrencyExchangeRatesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> remoteId = const Value.absent(),
+                Value<int?> flagImageId = const Value.absent(),
+                Value<String?> flagImagePath = const Value.absent(),
+                Value<String> countryName = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<int> buy = const Value.absent(),
+                Value<int> sell = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> tag = const Value.absent(),
+              }) => CurrencyExchangeRatesCompanion(
+                id: id,
+                remoteId: remoteId,
+                flagImageId: flagImageId,
+                flagImagePath: flagImagePath,
+                countryName: countryName,
+                currencyCode: currencyCode,
+                buy: buy,
+                sell: sell,
+                position: position,
+                tag: tag,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int remoteId,
+                Value<int?> flagImageId = const Value.absent(),
+                Value<String?> flagImagePath = const Value.absent(),
+                required String countryName,
+                required String currencyCode,
+                required int buy,
+                required int sell,
+                required int position,
+                required String tag,
+              }) => CurrencyExchangeRatesCompanion.insert(
+                id: id,
+                remoteId: remoteId,
+                flagImageId: flagImageId,
+                flagImagePath: flagImagePath,
+                countryName: countryName,
+                currencyCode: currencyCode,
+                buy: buy,
+                sell: sell,
+                position: position,
+                tag: tag,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CurrencyExchangeRatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CurrencyExchangeRatesTable,
+      CurrencyExchangeRate,
+      $$CurrencyExchangeRatesTableFilterComposer,
+      $$CurrencyExchangeRatesTableOrderingComposer,
+      $$CurrencyExchangeRatesTableAnnotationComposer,
+      $$CurrencyExchangeRatesTableCreateCompanionBuilder,
+      $$CurrencyExchangeRatesTableUpdateCompanionBuilder,
+      (
+        CurrencyExchangeRate,
+        BaseReferences<
+          _$AppDatabase,
+          $CurrencyExchangeRatesTable,
+          CurrencyExchangeRate
+        >,
+      ),
+      CurrencyExchangeRate,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1782,4 +2722,6 @@ class $AppDatabaseManager {
       $$MediaTableTableManager(_db, _db.media);
   $$ServerPropertiesTableTableManager get serverProperties =>
       $$ServerPropertiesTableTableManager(_db, _db.serverProperties);
+  $$CurrencyExchangeRatesTableTableManager get currencyExchangeRates =>
+      $$CurrencyExchangeRatesTableTableManager(_db, _db.currencyExchangeRates);
 }

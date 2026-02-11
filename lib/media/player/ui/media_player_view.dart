@@ -155,8 +155,10 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
   Future<void> _showContextMenu(Offset globalPosition) async {
     if (!mounted) return;
 
-    final overlayBox =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final overlay = Overlay.of(context);
+    final renderObject = overlay.context.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return;
+    final overlayBox = renderObject;
     final action = await showMenu<_MediaContextAction>(
       context: context,
       position: RelativeRect.fromRect(
