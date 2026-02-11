@@ -101,7 +101,8 @@ Mismatch recovery:
 `MediaPlayerView` exposes a desktop context menu on right-click:
 
 - `Configure Server & Auth`: opens configuration/auth dialog (reuses
-  `ServerPropertiesFormView` + `AuthSection` stack)
+  `ServerPropertiesFormView` + `AuthSection` stack via
+  `ServerPropertiesConfigurationDialog`)
 - `Reinitialize Media`: optional action via callback to trigger media reinit
   after config/auth changes; test screen implementation restarts playback from
   first media item after reinit
@@ -110,6 +111,18 @@ Mismatch recovery:
 
 - `serverPropertiesRegistryService` for config/auth dialog
 - optional `onReinitializeRequested` callback if host wants reinit action enabled
+
+Dialog lifecycle note:
+
+- Do not create `ServerPropertiesFormViewModel` / `AuthViewModel` in the
+  caller and dispose them in `showDialog(...).finally(...)`.
+- Controllers can be disposed before the dialog route fully unmounts
+  (reverse animation), causing
+  `A TextEditingController was used after being disposed`.
+- Keep ownership inside `ServerPropertiesConfigurationDialog` and dispose in
+  that widget's `dispose()` instead.
+- Reference implementation:
+  `lib/core/server_properties/form/ui/view/server_properties_configuration_dialog.dart`
 
 ## Event Bus Contracts
 

@@ -8,6 +8,7 @@ import 'package:qms_revamped_content_desktop_client/core/init/service/init_servi
 import 'package:qms_revamped_content_desktop_client/core/init/view_model/init_view_model.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/logging_bootstrap.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/test/ui/screen/server_properties_dialog_stress_screen.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/storage/directory/currency_exchange_rate_flag_storage_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
@@ -86,14 +87,27 @@ class MyAppTwo extends StatefulWidget {
 }
 
 class _MyAppTwoState extends State<MyAppTwo> {
+  static const _openDialogStressScreen = bool.fromEnvironment(
+    'QMS_DIALOG_STRESS',
+    defaultValue: false,
+  );
+
   @override
   void initState() {
-    Provider.of<InitViewModel>(context, listen: false).init();
     super.initState();
+    if (_openDialogStressScreen) return;
+    Provider.of<InitViewModel>(context, listen: false).init();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_openDialogStressScreen) {
+      return const MaterialApp(
+        title: "QMS Content",
+        home: ServerPropertiesDialogStressScreen(),
+      );
+    }
+
     return MaterialApp(
       title: "QMS Content",
       home: InitScreen(

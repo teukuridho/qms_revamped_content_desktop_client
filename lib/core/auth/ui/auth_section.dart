@@ -18,12 +18,19 @@ class _AuthSectionState extends State<AuthSection> {
   late final VoidCallback _cancelQrStartSnackListener;
   late final VoidCallback _cancelQrPollSnackListener;
   late final VoidCallback _cancelLogoutSnackListener;
+  ScaffoldMessengerState? _messenger;
 
   @override
   void initState() {
+    super.initState();
     widget.viewModel.init();
     _attachSnackListeners();
-    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
   }
 
   void _attachSnackListeners() {
@@ -85,7 +92,9 @@ class _AuthSectionState extends State<AuthSection> {
     required String success,
     required String failurePrefix,
   }) {
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = _messenger;
+    if (messenger == null || !messenger.mounted) return;
+
     switch (state.state) {
       case ProcessStateEnum.success:
         messenger.clearSnackBars();
@@ -99,7 +108,9 @@ class _AuthSectionState extends State<AuthSection> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              msg == null || msg.isEmpty ? failurePrefix : '$failurePrefix: $msg',
+              msg == null || msg.isEmpty
+                  ? failurePrefix
+                  : '$failurePrefix: $msg',
             ),
             backgroundColor: Colors.red,
           ),
@@ -127,7 +138,9 @@ class _AuthSectionState extends State<AuthSection> {
       builder: (context, _) {
         final vm = widget.viewModel;
         final expiresAt = vm.accessTokenExpiresAtEpochMs > 0
-            ? DateTime.fromMillisecondsSinceEpoch(vm.accessTokenExpiresAtEpochMs)
+            ? DateTime.fromMillisecondsSinceEpoch(
+                vm.accessTokenExpiresAtEpochMs,
+              )
             : null;
 
         final da = vm.deviceAuthorization;
@@ -161,8 +174,8 @@ class _AuthSectionState extends State<AuthSection> {
                   runSpacing: 8,
                   children: [
                     ElevatedButton(
-                      onPressed: vm.loginBrowserState.state ==
-                              ProcessStateEnum.loading
+                      onPressed:
+                          vm.loginBrowserState.state == ProcessStateEnum.loading
                           ? null
                           : vm.loginWithBrowser,
                       child: Text(
@@ -181,9 +194,9 @@ class _AuthSectionState extends State<AuthSection> {
                       child: const Text('Login (QR)'),
                     ),
                     ElevatedButton(
-                      onPressed: (da == null ||
-                              vm.pollQrState.state ==
-                                  ProcessStateEnum.loading)
+                      onPressed:
+                          (da == null ||
+                              vm.pollQrState.state == ProcessStateEnum.loading)
                           ? null
                           : vm.completeQrLogin,
                       child: Text(
@@ -236,12 +249,7 @@ class _AuthSectionState extends State<AuthSection> {
                   Text('Expires in: ${vm.secondsLeft}s'),
                   const SizedBox(height: 8),
                   if (qrValue.isNotEmpty)
-                    Center(
-                      child: QrImageView(
-                        data: qrValue,
-                        size: 200,
-                      ),
-                    ),
+                    Center(child: QrImageView(data: qrValue, size: 200)),
                 ],
               ],
             ),

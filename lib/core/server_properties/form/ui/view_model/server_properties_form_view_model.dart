@@ -7,7 +7,6 @@ import 'package:qms_revamped_content_desktop_client/core/server_properties/regis
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/request/update_service_by_name_request.dart';
 
-
 class ServerPropertiesFormViewModel extends ChangeNotifier {
   // Deps
   late final ServerPropertiesRegistryService _registryService;
@@ -20,6 +19,8 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   final TextEditingController keycloakRealm = TextEditingController();
   final TextEditingController keycloakClientId = TextEditingController();
   ProcessState saveState = ProcessState(state: ProcessStateEnum.none);
+  bool _disposed = false;
+  int _loadEpoch = 0;
 
   ServerPropertiesFormViewModel({
     required ServerPropertiesRegistryService registryService,
@@ -30,13 +31,16 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   }
 
   void init() {
-    loadByServiceName();
+    unawaited(loadByServiceName());
   }
 
   Future<void> loadByServiceName() async {
+    if (_disposed) return;
+    final loadEpoch = ++_loadEpoch;
     ServerProperty? serverProperty = await _registryService.getOneByServiceName(
       serviceName: _serviceName,
     );
+    if (_disposed || loadEpoch != _loadEpoch) return;
     if (serverProperty != null) {
       serverAddress.text = serverProperty.serverAddress;
       keycloakBaseUrl.text = serverProperty.keycloakBaseUrl;
@@ -46,46 +50,70 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   }
 
   Future<void> save() async {
+    if (_disposed) return;
+    final serverAddressValue = serverAddress.text;
+    final keycloakBaseUrlValue = keycloakBaseUrl.text;
+    final keycloakRealmValue = keycloakRealm.text;
+    final keycloakClientIdValue = keycloakClientId.text;
+
     try {
-      saveState = ProcessState(state: ProcessStateEnum.loading);
-      notifyListeners();
+      _setSaveState(ProcessState(state: ProcessStateEnum.loading));
 
       ServerProperty? serverProperty = await _registryService
           .getOneByServiceName(serviceName: _serviceName);
+      if (_disposed) return;
       if (serverProperty == null) {
-        _registryService.create(
+        await _registryService.create(
           CreateServerPropertiesRequest(
             serviceName: _serviceName,
-            serverAddress: serverAddress.text,
-            keycloakBaseUrl: keycloakBaseUrl.text,
-            keycloakRealm: keycloakRealm.text,
-            keycloakClientId: keycloakClientId.text,
+            serverAddress: serverAddressValue,
+            keycloakBaseUrl: keycloakBaseUrlValue,
+            keycloakRealm: keycloakRealmValue,
+            keycloakClientId: keycloakClientIdValue,
           ),
         );
       } else {
-        _registryService.updateByServiceName(
+        await _registryService.updateByServiceName(
           UpdateServiceByNameRequest(
             serviceName: _serviceName,
-            serverAddress: serverAddress.text,
-            keycloakBaseUrl: keycloakBaseUrl.text,
-            keycloakRealm: keycloakRealm.text,
-            keycloakClientId: keycloakClientId.text,
+            serverAddress: serverAddressValue,
+            keycloakBaseUrl: keycloakBaseUrlValue,
+            keycloakRealm: keycloakRealmValue,
+            keycloakClientId: keycloakClientIdValue,
           ),
         );
       }
 
-      saveState = ProcessState(state: ProcessStateEnum.success);
-      notifyListeners();
+      _setSaveState(ProcessState(state: ProcessStateEnum.success));
     } on Exception catch (ex) {
-      saveState = ProcessState(state: ProcessStateEnum.failed, errorMessage: ex.toString());
+      _setSaveState(
+        ProcessState(
+          state: ProcessStateEnum.failed,
+          errorMessage: ex.toString(),
+        ),
+      );
     } finally {
-      saveState = ProcessState(state: ProcessStateEnum.none, errorMessage: saveState.errorMessage);
-      notifyListeners();
+      if (!_disposed) {
+        _setSaveState(
+          ProcessState(
+            state: ProcessStateEnum.none,
+            errorMessage: saveState.errorMessage,
+          ),
+        );
+      }
     }
+  }
+
+  void _setSaveState(ProcessState next) {
+    if (_disposed) return;
+    saveState = next;
+    notifyListeners();
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _loadEpoch++; // invalidates any in-flight loadByServiceName completion
     serverAddress.dispose();
     keycloakBaseUrl.dispose();
     keycloakRealm.dispose();

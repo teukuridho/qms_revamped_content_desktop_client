@@ -9,7 +9,11 @@ class InitScreen extends StatefulWidget {
   final ServerPropertiesRegistryService serverPropertiesRegistryService;
   final InitViewModel model;
 
-  const InitScreen({super.key, required this.model, required this.serverPropertiesRegistryService});
+  const InitScreen({
+    super.key,
+    required this.model,
+    required this.serverPropertiesRegistryService,
+  });
 
   @override
   State<InitScreen> createState() => _InitScreenState();
@@ -17,26 +21,25 @@ class InitScreen extends StatefulWidget {
 
 class _InitScreenState extends State<InitScreen> {
   late final VoidCallback _cancelFinishedListener;
+  bool _navigated = false;
 
   @override
   void initState() {
-    final model = Provider.of<InitViewModel>(context, listen: false);
-    _cancelFinishedListener = listenTo<bool>(
-      model,
-      () => model.finished,
-      (success) {
-        if (!mounted) return;
-        if (!success) return;
-
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => MainScreen(
-            ),
-          ),
-        );
-      },
-    );
     super.initState();
+    final model = widget.model;
+    _cancelFinishedListener = listenTo<bool>(model, () => model.finished, (
+      success,
+    ) {
+      if (!mounted || !success || _navigated) return;
+      _navigated = true;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      });
+    });
   }
 
   @override

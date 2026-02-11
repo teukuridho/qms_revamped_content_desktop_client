@@ -22,46 +22,57 @@ class ServerPropertiesFormView extends StatefulWidget {
 
 class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
   late final VoidCallback _cancelSaveErrorListener;
+  ScaffoldMessengerState? _messenger;
 
   @override
   void initState() {
+    super.initState();
     widget.viewModel.init();
     _attachListeners();
-    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
   }
 
   void _attachListeners() {
-    _cancelSaveErrorListener =
-        listenTo(widget.viewModel, () => widget.viewModel.saveState, (saveState) {
-      if (!mounted) return;
+    _cancelSaveErrorListener = listenTo(
+      widget.viewModel,
+      () => widget.viewModel.saveState,
+      (saveState) {
+        if (!mounted) return;
+        final messenger = _messenger;
+        if (messenger == null || !messenger.mounted) return;
 
-      switch(saveState.state) {
-        case ProcessStateEnum.none:
-          return;
-        case ProcessStateEnum.loading:
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Loading..."),
-            ),
-          );
-        case ProcessStateEnum.success:
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Success!"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        case ProcessStateEnum.failed:
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Unable to proceed; $saveState"),
-              backgroundColor: Colors.red,
-            ),
-          );
-      }
-    });
+        switch (saveState.state) {
+          case ProcessStateEnum.none:
+            return;
+          case ProcessStateEnum.loading:
+            messenger.showSnackBar(SnackBar(content: Text("Loading...")));
+            return;
+          case ProcessStateEnum.success:
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text("Success!"),
+                backgroundColor: Colors.green,
+              ),
+            );
+            return;
+          case ProcessStateEnum.failed:
+            messenger.clearSnackBars();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text("Unable to proceed; $saveState"),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+        }
+      },
+    );
   }
 
   @override
@@ -72,7 +83,7 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
 
   void _handleButtonSubmit() {
     bool valid = widget.viewModel.formKey.currentState!.validate();
-    if(valid) {
+    if (valid) {
       widget.viewModel.save();
     }
   }
@@ -137,7 +148,9 @@ class _ServerPropertiesFormViewState extends State<ServerPropertiesFormView> {
           SizedBox(
             width: double.maxFinite,
             child: ElevatedButton(
-                onPressed: _handleButtonSubmit, child: Text("Submit")),
+              onPressed: _handleButtonSubmit,
+              child: Text("Submit"),
+            ),
           ),
           if (widget.authViewModel != null) ...[
             Padding(padding: const EdgeInsetsGeometry.symmetric(vertical: 10)),
