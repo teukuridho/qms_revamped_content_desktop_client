@@ -21,7 +21,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -104,8 +104,70 @@ class AppDatabase extends _$AppDatabase {
       if (from < 8) {
         await m.createTable(currencyExchangeRates);
       }
+
+      if (from >= 8 && from < 9) {
+        await _migrateCurrencyExchangeRateBuySellToReal();
+      }
     },
   );
+
+  Future<void> _migrateCurrencyExchangeRateBuySellToReal() async {
+    await customStatement('''
+CREATE TABLE currency_exchange_rates_new (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  remote_id INTEGER NOT NULL,
+  flag_image_id INTEGER NULL,
+  flag_image_path TEXT NULL,
+  country_name TEXT NOT NULL,
+  currency_code TEXT NOT NULL,
+  buy REAL NOT NULL,
+  sell REAL NOT NULL,
+  position INTEGER NOT NULL,
+  tag TEXT NOT NULL
+)
+''');
+
+    await customStatement('''
+INSERT INTO currency_exchange_rates_new (
+  id,
+  remote_id,
+  flag_image_id,
+  flag_image_path,
+  country_name,
+  currency_code,
+  buy,
+  sell,
+  position,
+  tag
+)
+SELECT
+  id,
+  remote_id,
+  flag_image_id,
+  flag_image_path,
+  country_name,
+  currency_code,
+  CAST(buy AS REAL),
+  CAST(sell AS REAL),
+  position,
+  tag
+FROM currency_exchange_rates
+''');
+
+    await customStatement('DROP TABLE currency_exchange_rates');
+    await customStatement(
+      'ALTER TABLE currency_exchange_rates_new RENAME TO currency_exchange_rates',
+    );
+
+    await customStatement(
+      "DELETE FROM sqlite_sequence WHERE name = 'currency_exchange_rates'",
+    );
+    await customStatement('''
+INSERT INTO sqlite_sequence(name, seq)
+SELECT 'currency_exchange_rates', COALESCE(MAX(id), 0)
+FROM currency_exchange_rates
+''');
+  }
 
   LazyDatabase openConnection() {
     return LazyDatabase(() async {

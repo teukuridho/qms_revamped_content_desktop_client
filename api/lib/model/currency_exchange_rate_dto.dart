@@ -18,8 +18,8 @@ class CurrencyExchangeRateDto {
     required this.currencyCode,
     required this.currencyName,
     this.flagImageId,
-    required this.buy,
-    required this.sell,
+    this.buy,
+    this.sell,
     required this.position,
     required this.tag,
   });
@@ -40,9 +40,21 @@ class CurrencyExchangeRateDto {
   ///
   int? flagImageId;
 
-  int buy;
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? buy;
 
-  int sell;
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? sell;
 
   int position;
 
@@ -68,8 +80,8 @@ class CurrencyExchangeRateDto {
     (currencyCode.hashCode) +
     (currencyName.hashCode) +
     (flagImageId == null ? 0 : flagImageId!.hashCode) +
-    (buy.hashCode) +
-    (sell.hashCode) +
+    (buy == null ? 0 : buy!.hashCode) +
+    (sell == null ? 0 : sell!.hashCode) +
     (position.hashCode) +
     (tag.hashCode);
 
@@ -87,8 +99,16 @@ class CurrencyExchangeRateDto {
     } else {
       json[r'flagImageId'] = null;
     }
+    if (this.buy != null) {
       json[r'buy'] = this.buy;
+    } else {
+      json[r'buy'] = null;
+    }
+    if (this.sell != null) {
       json[r'sell'] = this.sell;
+    } else {
+      json[r'sell'] = null;
+    }
       json[r'position'] = this.position;
       json[r'tag'] = this.tag;
     return json;
@@ -118,8 +138,8 @@ class CurrencyExchangeRateDto {
         currencyCode: mapValueOfType<String>(json, r'currencyCode')!,
         currencyName: mapValueOfType<String>(json, r'currencyName')!,
         flagImageId: mapValueOfType<int>(json, r'flagImageId'),
-        buy: mapValueOfType<int>(json, r'buy')!,
-        sell: mapValueOfType<int>(json, r'sell')!,
+        buy: mapValueOfType<double>(json, r'buy'),
+        sell: mapValueOfType<double>(json, r'sell'),
         position: mapValueOfType<int>(json, r'position')!,
         tag: mapValueOfType<String>(json, r'tag')!,
       );
@@ -173,8 +193,6 @@ class CurrencyExchangeRateDto {
     'tenantId',
     'currencyCode',
     'currencyName',
-    'buy',
-    'sell',
     'position',
     'tag',
   };

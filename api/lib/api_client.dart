@@ -11,7 +11,7 @@
 part of openapi.api;
 
 class ApiClient {
-  ApiClient({this.basePath = 'http://localhost:8082', this.authentication,});
+  ApiClient({this.basePath = 'http://192.168.137.7:8082', this.authentication,});
 
   final String basePath;
   final Authentication? authentication;
@@ -230,8 +230,6 @@ class ApiClient {
           return ProductUpdatedEventDto.fromJson(value);
         case 'RunningTextDto':
           return RunningTextDto.fromJson(value);
-        case 'SubscribeMediaRequest':
-          return SubscribeMediaRequest.fromJson(value);
         case 'SubscribePositionUpdatedRequest':
           return SubscribePositionUpdatedRequest.fromJson(value);
         case 'UpdateCurrencyExchangeRateRequest':

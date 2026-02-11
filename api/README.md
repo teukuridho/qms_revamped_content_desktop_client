@@ -59,7 +59,7 @@ try {
 
 ## Documentation for API Endpoints
 
-All URIs are relative to *http://localhost:8082*
+All URIs are relative to *http://192.168.137.7:8082*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
@@ -123,7 +123,6 @@ Class | Method | HTTP request | Description
  - [ProductDto](doc//ProductDto.md)
  - [ProductUpdatedEventDto](doc//ProductUpdatedEventDto.md)
  - [RunningTextDto](doc//RunningTextDto.md)
- - [SubscribeMediaRequest](doc//SubscribeMediaRequest.md)
  - [SubscribePositionUpdatedRequest](doc//SubscribePositionUpdatedRequest.md)
  - [UpdateCurrencyExchangeRateRequest](doc//UpdateCurrencyExchangeRateRequest.md)
  - [UpdatePositionRequest](doc//UpdatePositionRequest.md)

@@ -40,7 +40,6 @@ doc/RunningTextDto.md
 doc/RunningTextInitializerApi.md
 doc/RunningTextRegistryApi.md
 doc/SecureControllerApi.md
-doc/SubscribeMediaRequest.md
 doc/SubscribePositionUpdatedRequest.md
 doc/UpdateCurrencyExchangeRateRequest.md
 doc/UpdatePositionRequest.md
@@ -96,7 +95,6 @@ lib/model/product_deleted_event_dto.dart
 lib/model/product_dto.dart
 lib/model/product_updated_event_dto.dart
 lib/model/running_text_dto.dart
-lib/model/subscribe_media_request.dart
 lib/model/subscribe_position_updated_request.dart
 lib/model/update_currency_exchange_rate_request.dart
 lib/model/update_position_request.dart
@@ -105,4 +103,3 @@ lib/model/update_running_text_request.dart
 lib/model/upload_flag_image_response.dart
 lib/model/upload_media_response.dart
 pubspec.yaml
-test/subscribe_media_request_test.dart

@@ -13,8 +13,8 @@ Name | Type | Description | Notes
 **currencyCode** | **String** |  | 
 **currencyName** | **String** |  | 
 **flagImageId** | **int** |  | [optional] 
-**buy** | **int** |  | 
-**sell** | **int** |  | 
+**buy** | **double** |  | [optional] 
+**sell** | **double** |  | [optional] 
 **position** | **int** |  | 
 **tag** | **String** |  | 
 

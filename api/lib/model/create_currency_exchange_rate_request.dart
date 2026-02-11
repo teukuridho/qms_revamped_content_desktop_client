@@ -16,8 +16,8 @@ class CreateCurrencyExchangeRateRequest {
     required this.currencyCode,
     required this.currencyName,
     required this.flagImageId,
-    required this.buy,
-    required this.sell,
+    this.buy,
+    this.sell,
     required this.tag,
   });
 
@@ -27,9 +27,21 @@ class CreateCurrencyExchangeRateRequest {
 
   int flagImageId;
 
-  int buy;
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? buy;
 
-  int sell;
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? sell;
 
   String tag;
 
@@ -48,8 +60,8 @@ class CreateCurrencyExchangeRateRequest {
     (currencyCode.hashCode) +
     (currencyName.hashCode) +
     (flagImageId.hashCode) +
-    (buy.hashCode) +
-    (sell.hashCode) +
+    (buy == null ? 0 : buy!.hashCode) +
+    (sell == null ? 0 : sell!.hashCode) +
     (tag.hashCode);
 
   @override
@@ -60,8 +72,16 @@ class CreateCurrencyExchangeRateRequest {
       json[r'currencyCode'] = this.currencyCode;
       json[r'currencyName'] = this.currencyName;
       json[r'flagImageId'] = this.flagImageId;
+    if (this.buy != null) {
       json[r'buy'] = this.buy;
+    } else {
+      json[r'buy'] = null;
+    }
+    if (this.sell != null) {
       json[r'sell'] = this.sell;
+    } else {
+      json[r'sell'] = null;
+    }
       json[r'tag'] = this.tag;
     return json;
   }
@@ -88,8 +108,8 @@ class CreateCurrencyExchangeRateRequest {
         currencyCode: mapValueOfType<String>(json, r'currencyCode')!,
         currencyName: mapValueOfType<String>(json, r'currencyName')!,
         flagImageId: mapValueOfType<int>(json, r'flagImageId')!,
-        buy: mapValueOfType<int>(json, r'buy')!,
-        sell: mapValueOfType<int>(json, r'sell')!,
+        buy: mapValueOfType<double>(json, r'buy'),
+        sell: mapValueOfType<double>(json, r'sell'),
         tag: mapValueOfType<String>(json, r'tag')!,
       );
     }
@@ -141,8 +161,6 @@ class CreateCurrencyExchangeRateRequest {
     'currencyCode',
     'currencyName',
     'flagImageId',
-    'buy',
-    'sell',
     'tag',
   };
 }

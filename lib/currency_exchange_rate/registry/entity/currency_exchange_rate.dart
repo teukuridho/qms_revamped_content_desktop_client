@@ -13,9 +13,9 @@ class CurrencyExchangeRates extends Table {
 
   TextColumn get currencyCode => text()();
 
-  IntColumn get buy => integer()();
+  RealColumn get buy => real()();
 
-  IntColumn get sell => integer()();
+  RealColumn get sell => real()();
 
   IntColumn get position => integer()();
 

@@ -106,8 +106,8 @@ class CurrencyExchangeRateRegistryService {
     required String? flagImagePath,
     required String countryName,
     required String currencyCode,
-    required int buy,
-    required int sell,
+    required double buy,
+    required double sell,
     required int position,
     required String tag,
   }) async {

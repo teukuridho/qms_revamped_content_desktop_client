@@ -51,7 +51,7 @@ class UpdateCurrencyExchangeRateRequest {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  int? buy;
+  double? buy;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -59,7 +59,7 @@ class UpdateCurrencyExchangeRateRequest {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  int? sell;
+  double? sell;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -148,8 +148,8 @@ class UpdateCurrencyExchangeRateRequest {
         currencyCode: mapValueOfType<String>(json, r'currencyCode'),
         currencyName: mapValueOfType<String>(json, r'currencyName'),
         flagImageId: mapValueOfType<int>(json, r'flagImageId'),
-        buy: mapValueOfType<int>(json, r'buy'),
-        sell: mapValueOfType<int>(json, r'sell'),
+        buy: mapValueOfType<double>(json, r'buy'),
+        sell: mapValueOfType<double>(json, r'sell'),
         tag: mapValueOfType<String>(json, r'tag'),
       );
     }

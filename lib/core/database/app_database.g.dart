@@ -1256,20 +1256,20 @@ class $CurrencyExchangeRatesTable extends CurrencyExchangeRates
   );
   static const VerificationMeta _buyMeta = const VerificationMeta('buy');
   @override
-  late final GeneratedColumn<int> buy = GeneratedColumn<int>(
+  late final GeneratedColumn<double> buy = GeneratedColumn<double>(
     'buy',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _sellMeta = const VerificationMeta('sell');
   @override
-  late final GeneratedColumn<int> sell = GeneratedColumn<int>(
+  late final GeneratedColumn<double> sell = GeneratedColumn<double>(
     'sell',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _positionMeta = const VerificationMeta(
@@ -1434,11 +1434,11 @@ class $CurrencyExchangeRatesTable extends CurrencyExchangeRates
         data['${effectivePrefix}currency_code'],
       )!,
       buy: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}buy'],
       )!,
       sell: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}sell'],
       )!,
       position: attachedDatabase.typeMapping.read(
@@ -1466,8 +1466,8 @@ class CurrencyExchangeRate extends DataClass
   final String? flagImagePath;
   final String countryName;
   final String currencyCode;
-  final int buy;
-  final int sell;
+  final double buy;
+  final double sell;
   final int position;
   final String tag;
   const CurrencyExchangeRate({
@@ -1495,8 +1495,8 @@ class CurrencyExchangeRate extends DataClass
     }
     map['country_name'] = Variable<String>(countryName);
     map['currency_code'] = Variable<String>(currencyCode);
-    map['buy'] = Variable<int>(buy);
-    map['sell'] = Variable<int>(sell);
+    map['buy'] = Variable<double>(buy);
+    map['sell'] = Variable<double>(sell);
     map['position'] = Variable<int>(position);
     map['tag'] = Variable<String>(tag);
     return map;
@@ -1533,8 +1533,8 @@ class CurrencyExchangeRate extends DataClass
       flagImagePath: serializer.fromJson<String?>(json['flagImagePath']),
       countryName: serializer.fromJson<String>(json['countryName']),
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
-      buy: serializer.fromJson<int>(json['buy']),
-      sell: serializer.fromJson<int>(json['sell']),
+      buy: serializer.fromJson<double>(json['buy']),
+      sell: serializer.fromJson<double>(json['sell']),
       position: serializer.fromJson<int>(json['position']),
       tag: serializer.fromJson<String>(json['tag']),
     );
@@ -1549,8 +1549,8 @@ class CurrencyExchangeRate extends DataClass
       'flagImagePath': serializer.toJson<String?>(flagImagePath),
       'countryName': serializer.toJson<String>(countryName),
       'currencyCode': serializer.toJson<String>(currencyCode),
-      'buy': serializer.toJson<int>(buy),
-      'sell': serializer.toJson<int>(sell),
+      'buy': serializer.toJson<double>(buy),
+      'sell': serializer.toJson<double>(sell),
       'position': serializer.toJson<int>(position),
       'tag': serializer.toJson<String>(tag),
     };
@@ -1563,8 +1563,8 @@ class CurrencyExchangeRate extends DataClass
     Value<String?> flagImagePath = const Value.absent(),
     String? countryName,
     String? currencyCode,
-    int? buy,
-    int? sell,
+    double? buy,
+    double? sell,
     int? position,
     String? tag,
   }) => CurrencyExchangeRate(
@@ -1658,8 +1658,8 @@ class CurrencyExchangeRatesCompanion
   final Value<String?> flagImagePath;
   final Value<String> countryName;
   final Value<String> currencyCode;
-  final Value<int> buy;
-  final Value<int> sell;
+  final Value<double> buy;
+  final Value<double> sell;
   final Value<int> position;
   final Value<String> tag;
   const CurrencyExchangeRatesCompanion({
@@ -1681,8 +1681,8 @@ class CurrencyExchangeRatesCompanion
     this.flagImagePath = const Value.absent(),
     required String countryName,
     required String currencyCode,
-    required int buy,
-    required int sell,
+    required double buy,
+    required double sell,
     required int position,
     required String tag,
   }) : remoteId = Value(remoteId),
@@ -1699,8 +1699,8 @@ class CurrencyExchangeRatesCompanion
     Expression<String>? flagImagePath,
     Expression<String>? countryName,
     Expression<String>? currencyCode,
-    Expression<int>? buy,
-    Expression<int>? sell,
+    Expression<double>? buy,
+    Expression<double>? sell,
     Expression<int>? position,
     Expression<String>? tag,
   }) {
@@ -1725,8 +1725,8 @@ class CurrencyExchangeRatesCompanion
     Value<String?>? flagImagePath,
     Value<String>? countryName,
     Value<String>? currencyCode,
-    Value<int>? buy,
-    Value<int>? sell,
+    Value<double>? buy,
+    Value<double>? sell,
     Value<int>? position,
     Value<String>? tag,
   }) {
@@ -1766,10 +1766,10 @@ class CurrencyExchangeRatesCompanion
       map['currency_code'] = Variable<String>(currencyCode.value);
     }
     if (buy.present) {
-      map['buy'] = Variable<int>(buy.value);
+      map['buy'] = Variable<double>(buy.value);
     }
     if (sell.present) {
-      map['sell'] = Variable<int>(sell.value);
+      map['sell'] = Variable<double>(sell.value);
     }
     if (position.present) {
       map['position'] = Variable<int>(position.value);
@@ -2406,8 +2406,8 @@ typedef $$CurrencyExchangeRatesTableCreateCompanionBuilder =
       Value<String?> flagImagePath,
       required String countryName,
       required String currencyCode,
-      required int buy,
-      required int sell,
+      required double buy,
+      required double sell,
       required int position,
       required String tag,
     });
@@ -2419,8 +2419,8 @@ typedef $$CurrencyExchangeRatesTableUpdateCompanionBuilder =
       Value<String?> flagImagePath,
       Value<String> countryName,
       Value<String> currencyCode,
-      Value<int> buy,
-      Value<int> sell,
+      Value<double> buy,
+      Value<double> sell,
       Value<int> position,
       Value<String> tag,
     });
@@ -2464,12 +2464,12 @@ class $$CurrencyExchangeRatesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get buy => $composableBuilder(
+  ColumnFilters<double> get buy => $composableBuilder(
     column: $table.buy,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get sell => $composableBuilder(
+  ColumnFilters<double> get sell => $composableBuilder(
     column: $table.sell,
     builder: (column) => ColumnFilters(column),
   );
@@ -2524,12 +2524,12 @@ class $$CurrencyExchangeRatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get buy => $composableBuilder(
+  ColumnOrderings<double> get buy => $composableBuilder(
     column: $table.buy,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get sell => $composableBuilder(
+  ColumnOrderings<double> get sell => $composableBuilder(
     column: $table.sell,
     builder: (column) => ColumnOrderings(column),
   );
@@ -2580,10 +2580,10 @@ class $$CurrencyExchangeRatesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get buy =>
+  GeneratedColumn<double> get buy =>
       $composableBuilder(column: $table.buy, builder: (column) => column);
 
-  GeneratedColumn<int> get sell =>
+  GeneratedColumn<double> get sell =>
       $composableBuilder(column: $table.sell, builder: (column) => column);
 
   GeneratedColumn<int> get position =>
@@ -2645,8 +2645,8 @@ class $$CurrencyExchangeRatesTableTableManager
                 Value<String?> flagImagePath = const Value.absent(),
                 Value<String> countryName = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
-                Value<int> buy = const Value.absent(),
-                Value<int> sell = const Value.absent(),
+                Value<double> buy = const Value.absent(),
+                Value<double> sell = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<String> tag = const Value.absent(),
               }) => CurrencyExchangeRatesCompanion(
@@ -2669,8 +2669,8 @@ class $$CurrencyExchangeRatesTableTableManager
                 Value<String?> flagImagePath = const Value.absent(),
                 required String countryName,
                 required String currencyCode,
-                required int buy,
-                required int sell,
+                required double buy,
+                required double sell,
                 required int position,
                 required String tag,
               }) => CurrencyExchangeRatesCompanion.insert(

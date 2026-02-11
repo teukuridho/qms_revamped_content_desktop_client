@@ -219,8 +219,8 @@ class CurrencyExchangeRateDownloader
       flagImagePath: flagImagePath,
       countryName: dto.currencyName,
       currencyCode: dto.currencyCode,
-      buy: dto.buy,
-      sell: dto.sell,
+      buy: dto.buy ?? 0.0,
+      sell: dto.sell ?? 0.0,
       position: dto.position,
       tag: dto.tag,
     );

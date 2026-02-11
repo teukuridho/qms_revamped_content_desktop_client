@@ -190,24 +190,24 @@ class _CurrencyExchangeRateTableViewState
     );
   }
 
-  static String _formatFixedAmount(int value) {
+  static String _formatFixedAmount(double value) {
     final negative = value < 0;
-    final absValue = value.abs();
-    final digits = absValue.toString();
-    final grouped = StringBuffer();
+    final fixed = value.abs().toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final intPart = parts.first;
+    final decimalPart = parts.length > 1 ? parts[1] : '00';
 
-    for (var i = 0; i < digits.length; i++) {
-      final left = digits.length - i;
-      grouped.write(digits[i]);
+    final grouped = StringBuffer();
+    for (var i = 0; i < intPart.length; i++) {
+      final left = intPart.length - i;
+      grouped.write(intPart[i]);
       if (left > 1 && left % 3 == 1) {
         grouped.write(',');
       }
     }
 
-    if (negative) {
-      return '-${grouped.toString()}.00';
-    }
-    return '${grouped.toString()}.00';
+    final prefix = negative ? '-' : '';
+    return '$prefix${grouped.toString()}.$decimalPart';
   }
 
   Future<void> _showContextMenu(Offset globalPosition) async {

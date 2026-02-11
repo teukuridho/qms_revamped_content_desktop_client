@@ -11,8 +11,8 @@ Name | Type | Description | Notes
 **currencyCode** | **String** |  | [optional] 
 **currencyName** | **String** |  | [optional] 
 **flagImageId** | **int** |  | [optional] 
-**buy** | **int** |  | [optional] 
-**sell** | **int** |  | [optional] 
+**buy** | **double** |  | [optional] 
+**sell** | **double** |  | [optional] 
 **tag** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

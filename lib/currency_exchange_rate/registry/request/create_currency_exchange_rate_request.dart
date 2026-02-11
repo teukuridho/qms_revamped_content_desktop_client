@@ -4,8 +4,8 @@ class CreateCurrencyExchangeRateRequest {
   late final String? flagImagePath;
   late final String countryName;
   late final String currencyCode;
-  late final int buy;
-  late final int sell;
+  late final double buy;
+  late final double sell;
   late final int position;
   late final String tag;
 
