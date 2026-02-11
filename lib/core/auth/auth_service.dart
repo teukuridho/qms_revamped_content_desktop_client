@@ -37,11 +37,18 @@ class OidcAuthService {
        _eventManager = eventManager,
        _oidcClient = oidcClient ?? KeycloakOidcClient();
 
-  Future<DeviceAuthorization> startQrLogin({String scope = defaultScope}) async {
+  Future<DeviceAuthorization> startQrLogin({
+    String scope = defaultScope,
+  }) async {
     AuthLogger.info('Auth[$_serviceName]: startQrLogin');
     final config = await _loadConfigOrThrow();
-    final da = await _oidcClient.startDeviceAuthorization(config: config, scope: scope);
-    AuthLogger.info('Auth[$_serviceName]: device authorization started (expiresIn=${da.expiresIn}s interval=${da.interval}s)');
+    final da = await _oidcClient.startDeviceAuthorization(
+      config: config,
+      scope: scope,
+    );
+    AuthLogger.info(
+      'Auth[$_serviceName]: device authorization started (expiresIn=${da.expiresIn}s interval=${da.interval}s)',
+    );
     return da;
   }
 
@@ -71,10 +78,14 @@ class OidcAuthService {
           tokenSet: tokenSet,
           serverProperty: sp,
         );
-        AuthLogger.info('Auth[$_serviceName]: device polling success; tokens saved');
+        AuthLogger.info(
+          'Auth[$_serviceName]: device polling success; tokens saved',
+        );
         return;
       } on OidcOAuthException catch (e) {
-        AuthLogger.debug('Auth[$_serviceName]: device polling oauth error=${e.error}');
+        AuthLogger.debug(
+          'Auth[$_serviceName]: device polling oauth error=${e.error}',
+        );
         switch (e.error) {
           case 'authorization_pending':
             await Future<void>.delayed(Duration(seconds: intervalSeconds));
@@ -165,13 +176,19 @@ class OidcAuthService {
         tokenSet: tokenSet,
         serverProperty: sp,
       );
-      AuthLogger.info('Auth[$_serviceName]: browser login success; tokens saved');
+      AuthLogger.info(
+        'Auth[$_serviceName]: browser login success; tokens saved',
+      );
     } on TimeoutException {
       throw const OidcProtocolException(
         'Browser login timed out. Please complete login in the browser and try again.',
       );
     } catch (e, st) {
-      AuthLogger.error('Auth[$_serviceName]: browser login failed', error: e, stackTrace: st);
+      AuthLogger.error(
+        'Auth[$_serviceName]: browser login failed',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     } finally {
       if (identical(_activeLoopback, loopback)) {
@@ -189,25 +206,35 @@ class OidcAuthService {
     }
   }
 
-  Future<String?> getValidAccessToken({Duration refreshSkew = const Duration(seconds: 30)}) async {
+  Future<String?> getValidAccessToken({
+    Duration refreshSkew = const Duration(seconds: 30),
+    bool forceRefresh = false,
+  }) async {
     AuthLogger.debug('Auth[$_serviceName]: getValidAccessToken');
     final sp = await _loadServerPropertiesOrNull();
     if (sp == null) return null;
 
     final access = sp.oidcAccessToken;
     final refresh = sp.oidcRefreshToken;
-    if (access.isEmpty) return null;
+    if (access.isEmpty && refresh.isEmpty) return null;
 
     final expiresAtMs = sp.oidcExpiresAtEpochMs;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final shouldRefresh = expiresAtMs > 0 && nowMs >= (expiresAtMs - refreshSkew.inMilliseconds);
+    final shouldRefresh =
+        forceRefresh ||
+        access.isEmpty ||
+        (expiresAtMs > 0 &&
+            nowMs >= (expiresAtMs - refreshSkew.inMilliseconds));
     if (!shouldRefresh) return access;
 
     if (refresh.isEmpty) return null;
 
     try {
       final config = await _loadConfigOrThrow();
-      final tokenSet = await _oidcClient.refreshTokens(config: config, refreshToken: refresh);
+      final tokenSet = await _oidcClient.refreshTokens(
+        config: config,
+        refreshToken: refresh,
+      );
       await _persistTokenSet(tokenSet);
       AuthLogger.info('Auth[$_serviceName]: refresh success; tokens saved');
       return tokenSet.accessToken;
@@ -255,14 +282,16 @@ class OidcAuthService {
       );
     }
 
-    final hasConfig = sp.keycloakBaseUrl.trim().isNotEmpty &&
+    final hasConfig =
+        sp.keycloakBaseUrl.trim().isNotEmpty &&
         sp.keycloakRealm.trim().isNotEmpty &&
         sp.keycloakClientId.trim().isNotEmpty;
     final hasAccess = sp.oidcAccessToken.isNotEmpty;
     final hasRefresh = sp.oidcRefreshToken.isNotEmpty;
     final expMs = sp.oidcExpiresAtEpochMs;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final isExpired = expMs > 0 && nowMs >= (expMs - accessTokenSkew.inMilliseconds);
+    final isExpired =
+        expMs > 0 && nowMs >= (expMs - accessTokenSkew.inMilliseconds);
 
     return AuthStatus(
       serviceName: _serviceName,
@@ -361,7 +390,9 @@ class OidcAuthService {
   }
 
   Future<ServerProperty?> _loadServerPropertiesOrNull() async {
-    return _serverPropertiesRegistryService.getOneByServiceName(serviceName: _serviceName);
+    return _serverPropertiesRegistryService.getOneByServiceName(
+      serviceName: _serviceName,
+    );
   }
 
   static String _randomBase64Url(int byteLength) {

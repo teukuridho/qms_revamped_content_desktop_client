@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:openapi/api.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/auth_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
@@ -25,6 +26,7 @@ class MediaSynchronizer {
 
   final EventManager _eventManager;
   final ServerPropertiesRegistryService _serverPropertiesRegistryService;
+  final OidcAuthService _authService;
   final MediaDownloaderBase _downloader;
   final MediaDeleterBase _deleter;
   final MediaReloadSignal _playerController;
@@ -44,9 +46,16 @@ class MediaSynchronizer {
     required MediaDownloaderBase downloader,
     required MediaDeleterBase deleter,
     required MediaReloadSignal playerController,
+    OidcAuthService? authService,
     SseClientFactory? sseClientFactory,
   }) : _eventManager = eventManager,
        _serverPropertiesRegistryService = serverPropertiesRegistryService,
+       _authService =
+           authService ??
+           OidcAuthService(
+             serviceName: serviceName,
+             serverPropertiesRegistryService: serverPropertiesRegistryService,
+           ),
        _downloader = downloader,
        _deleter = deleter,
        _playerController = playerController,
@@ -103,6 +112,13 @@ class MediaSynchronizer {
           'Media SSE stream ended; retrying in ${retryDelay.inSeconds}s (serviceName=$serviceName tag=$tag)',
         );
       } catch (e, st) {
+        if (_isUnauthorizedError(e)) {
+          try {
+            await _authService.getValidAccessToken(forceRefresh: true);
+          } catch (_) {
+            // Best-effort. The retry loop below will continue and report errors.
+          }
+        }
         MediaSynchronizerLogger.error(
           'Media subscribe failed; retrying in ${retryDelay.inSeconds}s (serviceName=$serviceName tag=$tag)',
           error: e,
@@ -132,10 +148,10 @@ class MediaSynchronizer {
       throw StateError('Missing serverAddress for serviceName=$serviceName');
     }
 
-    final token = sp.oidcAccessToken.trim();
+    final token = (await _authService.getValidAccessToken())?.trim() ?? '';
     if (token.isEmpty) {
       throw StateError(
-        'Missing access token for serviceName=$serviceName (login first)',
+        'Missing/expired access token for serviceName=$serviceName (login first)',
       );
     }
 
@@ -274,5 +290,10 @@ class MediaSynchronizer {
     _authSub = null;
 
     await _closeSseClient();
+  }
+
+  bool _isUnauthorizedError(Object error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('401') || msg.contains('unauthorized');
   }
 }

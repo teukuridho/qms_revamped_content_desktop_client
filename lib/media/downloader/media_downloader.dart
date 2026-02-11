@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:openapi/api.dart' show MediaDto;
+import 'package:qms_revamped_content_desktop_client/core/auth/auth_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/downloader/event/media_download_events.dart';
@@ -19,6 +20,7 @@ class MediaDownloader implements MediaDownloaderBase {
 
   final EventManager _eventManager;
   final ServerPropertiesRegistryService _serverPropertiesRegistryService;
+  final OidcAuthService _authService;
   final MediaRegistryService _mediaRegistryService;
   final MediaStorageFileService _mediaStorageFileService;
   final RemoteMediaRegistryClient _remoteRegistryClient;
@@ -31,10 +33,17 @@ class MediaDownloader implements MediaDownloaderBase {
     required ServerPropertiesRegistryService serverPropertiesRegistryService,
     required MediaRegistryService mediaRegistryService,
     required MediaStorageFileService mediaStorageFileService,
+    OidcAuthService? authService,
     RemoteMediaRegistryClient? remoteRegistryClient,
     RemoteMediaStorageClient? remoteStorageClient,
   }) : _eventManager = eventManager,
        _serverPropertiesRegistryService = serverPropertiesRegistryService,
+       _authService =
+           authService ??
+           OidcAuthService(
+             serviceName: serviceName,
+             serverPropertiesRegistryService: serverPropertiesRegistryService,
+           ),
        _mediaRegistryService = mediaRegistryService,
        _mediaStorageFileService = mediaStorageFileService,
        _remoteRegistryClient =
@@ -62,13 +71,6 @@ class MediaDownloader implements MediaDownloaderBase {
         throw StateError('Missing serverAddress for serviceName=$serviceName');
       }
 
-      final token = sp.oidcAccessToken.trim();
-      if (token.isEmpty) {
-        throw StateError(
-          'Missing access token for serviceName=$serviceName (login first)',
-        );
-      }
-
       final baseUri = ServerAddressParser.parse(serverAddress);
       final basePath = Uri.parse(
         ServerAddressParser.normalizeBasePath(baseUri),
@@ -78,11 +80,14 @@ class MediaDownloader implements MediaDownloaderBase {
         'Downloading all media (serviceName=$serviceName tag=$tag base=$basePath)',
       );
 
-      final remote = await _remoteRegistryClient.getMany(
-        baseUri: basePath,
-        accessToken: token,
-        tag: tag,
-        size: size,
+      final remote = await _withValidAccessToken(
+        operationName: 'media-registry getMany',
+        run: (token) => _remoteRegistryClient.getMany(
+          baseUri: basePath,
+          accessToken: token,
+          tag: tag,
+          size: size,
+        ),
       );
 
       final remoteIds = remote.map((e) => e.id).toSet();
@@ -109,11 +114,7 @@ class MediaDownloader implements MediaDownloaderBase {
           continue;
         }
 
-        downloaded += await _downloadAndUpsertOne(
-          baseUri: basePath,
-          accessToken: token,
-          dto: dto,
-        );
+        downloaded += await _downloadAndUpsertOne(baseUri: basePath, dto: dto);
       }
 
       _eventManager.publishEvent(
@@ -141,6 +142,7 @@ class MediaDownloader implements MediaDownloaderBase {
     }
   }
 
+  @override
   Future<void> downloadOne(MediaDto dto) async {
     if (dto.status.value.toUpperCase() == 'DELETED') {
       await _mediaRegistryService.deleteByRemoteId(remoteId: dto.id, tag: tag);
@@ -164,25 +166,17 @@ class MediaDownloader implements MediaDownloaderBase {
       );
     }
     final serverAddress = sp.serverAddress.trim();
-    final token = sp.oidcAccessToken.trim();
-    if (serverAddress.isEmpty || token.isEmpty) {
-      throw StateError(
-        'Missing serverAddress/token for serviceName=$serviceName',
-      );
+    if (serverAddress.isEmpty) {
+      throw StateError('Missing serverAddress for serviceName=$serviceName');
     }
 
     final baseUri = ServerAddressParser.parse(serverAddress);
     final basePath = Uri.parse(ServerAddressParser.normalizeBasePath(baseUri));
-    await _downloadAndUpsertOne(
-      baseUri: basePath,
-      accessToken: token,
-      dto: dto,
-    );
+    await _downloadAndUpsertOne(baseUri: basePath, dto: dto);
   }
 
   Future<int> _downloadAndUpsertOne({
     required Uri baseUri,
-    required String accessToken,
     required MediaDto dto,
   }) async {
     if (dto.tag != tag) return 0;
@@ -197,11 +191,14 @@ class MediaDownloader implements MediaDownloaderBase {
       MediaDownloaderLogger.info(
         'Downloading media id=${dto.id} file=${localFile.path} tag=$tag',
       );
-      await _remoteStorageClient.downloadToFile(
-        baseUri: baseUri,
-        accessToken: accessToken,
-        remoteId: dto.id,
-        destination: localFile,
+      await _withValidAccessToken(
+        operationName: 'media-storage download',
+        run: (token) => _remoteStorageClient.downloadToFile(
+          baseUri: baseUri,
+          accessToken: token,
+          remoteId: dto.id,
+          destination: localFile,
+        ),
       );
       // Best-effort sanity check. The download endpoint should return bytes.
       if (!await localFile.exists()) {
@@ -226,5 +223,46 @@ class MediaDownloader implements MediaDownloaderBase {
     );
 
     return exists ? 0 : 1;
+  }
+
+  Future<T> _withValidAccessToken<T>({
+    required String operationName,
+    required Future<T> Function(String accessToken) run,
+  }) async {
+    final token = await _authService.getValidAccessToken();
+    final accessToken = token?.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw StateError(
+        'Missing/expired access token for serviceName=$serviceName (login first)',
+      );
+    }
+
+    try {
+      return await run(accessToken);
+    } catch (e, st) {
+      if (!_isUnauthorizedError(e)) rethrow;
+
+      MediaDownloaderLogger.warn(
+        'Unauthorized during $operationName; forcing token refresh and retrying once (serviceName=$serviceName tag=$tag)',
+      );
+      final refreshed = await _authService.getValidAccessToken(
+        forceRefresh: true,
+      );
+      final refreshedToken = refreshed?.trim() ?? '';
+      if (refreshedToken.isEmpty) {
+        MediaDownloaderLogger.error(
+          'Forced token refresh failed during $operationName',
+          error: e,
+          stackTrace: st,
+        );
+        rethrow;
+      }
+      return run(refreshedToken);
+    }
+  }
+
+  bool _isUnauthorizedError(Object error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('401') || msg.contains('unauthorized');
   }
 }

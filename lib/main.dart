@@ -11,9 +11,14 @@ import 'package:qms_revamped_content_desktop_client/core/logging/logging_bootstr
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
 
+import 'package:media_kit/media_kit.dart';                      // Provides [Player], [Media], [Playlist] etc.
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
+
   await LoggingBootstrap.init();
+
 
   final log = AppLog.root.child('main');
   log.i('App starting');

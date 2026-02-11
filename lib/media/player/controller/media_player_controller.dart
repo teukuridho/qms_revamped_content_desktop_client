@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:media_kit/media_kit.dart' hide PlayerLog;
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
@@ -32,6 +32,7 @@ class MediaPlayerController extends ChangeNotifier
   StreamSubscription<bool>? _completedSub;
   StreamSubscription<MediaPlayEvent>? _playSub;
   StreamSubscription<MediaStopEvent>? _stopSub;
+  StreamSubscription<String>? _errorSub;
 
   Timer? _imageTimer;
 
@@ -42,7 +43,7 @@ class MediaPlayerController extends ChangeNotifier
   int _index = 0;
 
   bool _reloadNeeded = false;
-  String? _openedVideoUri;
+  String? _openedVideoPath;
 
   MediaPlayerController({
     required this.serviceName,
@@ -95,6 +96,10 @@ class MediaPlayerController extends ChangeNotifier
       if (event.tag != tag) return;
       unawaited(stop(reason: event.reason));
     });
+
+    _errorSub ??= _player.stream.error.listen((message) {
+      _log.e('media_kit player error: $message');
+    });
   }
 
   Future<void> loadFromDatabase() async {
@@ -131,8 +136,10 @@ class MediaPlayerController extends ChangeNotifier
     // Best-effort "resume": if current is the already opened video, just play().
     final current = this.current;
     if (current != null && isCurrentVideo) {
-      final uri = Uri.file(current.path).toString();
-      if (_openedVideoUri == uri && !_player.state.completed) {
+      final path = current.path;
+      final hasFrame =
+          (_player.state.width ?? 0) > 0 && (_player.state.height ?? 0) > 0;
+      if (_openedVideoPath == path && !_player.state.completed && hasFrame) {
         await _player.play();
         return;
       }
@@ -168,6 +175,25 @@ class MediaPlayerController extends ChangeNotifier
     await stop(reason: 'go_to_last');
   }
 
+  Future<void> playFromFirst({String reason = 'play_from_first'}) async {
+    if (_disposed) return;
+
+    await loadFromDatabase();
+    _index = 0;
+    _openedVideoPath = null;
+
+    if (_playlist.isEmpty) {
+      _playing = false;
+      notifyListeners();
+      return;
+    }
+
+    _log.i('playFromFirst(reason=$reason total=${_playlist.length})');
+    _playing = true;
+    notifyListeners();
+    await _playCurrent();
+  }
+
   Future<void> _playCurrent() async {
     _imageTimer?.cancel();
     _imageTimer = null;
@@ -195,9 +221,8 @@ class MediaPlayerController extends ChangeNotifier
 
     final contentType = media.contentType.toUpperCase();
     if (contentType == 'VIDEO') {
-      final uri = Uri.file(path).toString();
-      _openedVideoUri = uri;
-      await _player.open(Media(uri), play: true);
+      _openedVideoPath = path;
+      await _openVideoWithFrameFallback(path);
       return;
     }
 
@@ -217,6 +242,56 @@ class MediaPlayerController extends ChangeNotifier
       return;
     }
     await _playCurrent();
+  }
+
+  Future<void> _openVideoWithFrameFallback(String path) async {
+    final loaded = await _openAndWaitForVideoFrame(path);
+    if (loaded) return;
+
+    _log.w(
+      'Video frame did not become visible in time; retrying once (path=$path)',
+    );
+
+    try {
+      await _player.stop();
+    } catch (_) {
+      // Ignore.
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    final loadedAfterRetry = await _openAndWaitForVideoFrame(path);
+    if (!loadedAfterRetry) {
+      throw StateError('Unable to render video frames: $path');
+    }
+  }
+
+  Future<bool> _openAndWaitForVideoFrame(String path) async {
+    _log.i('Opening video path=$path');
+    await _player.open(Media(path), play: true);
+    final hasFrame = await _waitForVideoFrame();
+    if (!hasFrame) {
+      _log.w(
+        'No video frame detected after open (path=$path width=${_player.state.width} height=${_player.state.height})',
+      );
+    }
+    return hasFrame;
+  }
+
+  Future<bool> _waitForVideoFrame({
+    Duration timeout = const Duration(seconds: 4),
+  }) async {
+    final currentWidth = _player.state.width ?? 0;
+    final currentHeight = _player.state.height ?? 0;
+    if (currentWidth > 0 && currentHeight > 0) return true;
+
+    try {
+      await _player.stream.videoParams
+          .firstWhere((p) => (p.w ?? 0) > 0 && (p.h ?? 0) > 0)
+          .timeout(timeout);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _onEndOfPlaylist() async {
@@ -253,6 +328,9 @@ class MediaPlayerController extends ChangeNotifier
 
     await _stopSub?.cancel();
     _stopSub = null;
+
+    await _errorSub?.cancel();
+    _errorSub = null;
 
     try {
       await _player.dispose();
