@@ -139,6 +139,18 @@ Minimum behavior:
 - updates automatically after initial download, CRUD events, and position updates
 - does not require app restart for remote changes
 
+Dialog lifecycle note:
+
+- Do not create `ServerPropertiesFormViewModel` / `AuthViewModel` in the
+  caller and dispose them in `showDialog(...).finally(...)`.
+- Controllers can be disposed before the dialog route fully unmounts
+  (reverse animation), causing
+  `A TextEditingController was used after being disposed`.
+- Keep ownership inside `ServerPropertiesConfigurationDialog` and dispose in
+  that widget's `dispose()` instead.
+- Reference implementation:
+  `lib/core/server_properties/form/ui/view/server_properties_configuration_dialog.dart`
+
 ## Provider Usage (Same Pattern as Media)
 
 At screen level:
