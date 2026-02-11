@@ -93,6 +93,13 @@ class FakeSseClient implements SseClientBase {
 
 class FakeDownloader implements MediaDownloaderBase {
   final List<int> downloadedRemoteIds = [];
+  int downloadAllCalls = 0;
+
+  @override
+  Future<int> downloadAll({int size = 9999}) async {
+    downloadAllCalls += 1;
+    return 0;
+  }
 
   @override
   Future<void> downloadOne(MediaDto dto) async {
@@ -269,6 +276,9 @@ void main() {
       expect(capturedOptions!.url.path, '/api/media-subscribe');
       expect(capturedOptions!.url.queryParameters['tag'], tag);
       expect(capturedOptions!.headers['Authorization'], 'Bearer token123');
+      expect(capturedOptions!.enableSseIncrementalIdMismatch, isTrue);
+      expect(capturedOptions!.shouldRefreshWhenIdMismatch, isTrue);
+      expect(capturedOptions!.sseIncrementalMismatchCallback, isNotNull);
 
       fakeClient.add(
         MediaSynchronizer.uploadedFieldKey,
@@ -282,6 +292,78 @@ void main() {
       expect(downloader.downloadedRemoteIds, contains(10));
       expect(deleter.deletedRemoteIds, contains(99));
       expect(reload.calls, greaterThanOrEqualTo(2));
+
+      await sync.dispose();
+    },
+  );
+
+  test(
+    'refreshes from backend when media SSE incremental mismatch is reported',
+    () async {
+      final em = EventManager()..init();
+      final serviceName = 'svcA';
+      final tag = 'main';
+
+      SseClientOptions? capturedOptions;
+      final downloader = FakeDownloader();
+      final reload = FakeReloadSignal();
+
+      final sync = MediaSynchronizer(
+        serviceName: serviceName,
+        tag: tag,
+        eventManager: em,
+        serverPropertiesRegistryService: FakeServerPropertiesRegistryService(
+          _serverProperty(
+            serviceName: serviceName,
+            serverAddress: 'https://example.com/api',
+            accessToken: 'token123',
+          ),
+        ),
+        downloader: downloader,
+        deleter: FakeDeleter(),
+        playerController: reload,
+        sseClientFactory: (options) {
+          capturedOptions = options;
+          return FakeSseClient(options);
+        },
+      )..init();
+
+      em.publishEvent(
+        AuthLoggedInEvent(
+          serviceName: serviceName,
+          method: 'browser_pkce',
+          loggedInAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+          keycloakBaseUrl: '',
+          keycloakRealm: '',
+          keycloakClientId: '',
+          scope: '',
+          tokenType: '',
+          accessTokenExpiresAtEpochMs: 0,
+          hasRefreshToken: false,
+        ),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      final cb = capturedOptions?.sseIncrementalMismatchCallback;
+      expect(cb, isNotNull);
+
+      cb!(
+        SseIncrementalIdMismatch(
+          expectedId: 10,
+          actualIdRaw: '15',
+          actualIdParsed: 15,
+          reason: SseIncrementalIdMismatchReason.unexpectedId,
+          frame: const SseFrame({
+            'id': ['15'],
+          }),
+        ),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+
+      expect(downloader.downloadAllCalls, 1);
+      expect(reload.calls, 1);
 
       await sync.dispose();
     },

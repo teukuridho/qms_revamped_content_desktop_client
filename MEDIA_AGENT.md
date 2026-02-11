@@ -8,6 +8,10 @@ Implements a media feature that:
 - synchronizes changes via SSE (`media-uploaded`, `media-deleted`)
 - reorders on position updates (via `PositionUpdatedEventDto` -> local registry update)
 - reloads playlist order at end-of-loop after mass position changes
+- self-heals SSE drift: on incremental-id mismatch, does full backend refresh
+- renders video with full-frame letterbox behavior (`BoxFit.contain`) and
+  black bars when aspect ratio does not match the viewport
+- uses video controller UI (playback controls visible in video view)
 
 This module follows the same patterns as `POSITION_UPDATE_SUBSCRIBER_AGENT.MD`:
 
@@ -30,6 +34,8 @@ SSE fields:
 
 - `media-uploaded`: payload parses as `MediaUploadedEventDto`
 - `media-deleted`: payload parses as `MediaDeletedEventDto`
+- media SSE enables incremental `id:` mismatch detection; mismatch triggers a
+  full media refresh from backend (`downloadAll`) and schedules reload
 
 ## Local Storage
 
@@ -41,6 +47,8 @@ SSE fields:
 
 - Orchestrator: `lib/media/agent/media_agent.dart`
 - Wiring helper: `lib/media/agent/media_feature.dart`
+- Test screen: `lib/media/test/ui/screen/media_test_screen.dart`
+  (fixed `serviceName = 'main-media'`, `tag = 'main'`)
 - Downloader:
   - `lib/media/downloader/media_downloader.dart`
   - `lib/media/downloader/remote_media_registry_client.dart` (OpenAPI list)
@@ -49,6 +57,13 @@ SSE fields:
   - `lib/media/player/controller/media_player_controller.dart`
   - `lib/media/player/ui/media_player_view.dart`
   - Events: `lib/media/player/event/*`
+
+## Video Rendering Behavior
+
+- Video is rendered full-frame with `BoxFit.contain` to avoid clipping.
+- When viewport ratio differs from video ratio, top/bottom or side black bars
+  are expected (letterbox/pillarbox).
+- Video controller UI is enabled in the player view.
 - Synchronizer (SSE): `lib/media/synchronizer/media_synchronizer.dart`
 - Position update listener: `lib/media/position_update/media_position_update_listener.dart`
 - Mass position listener:
@@ -66,6 +81,31 @@ SSE fields:
 4. `MediaMassPositionUpdatedEventListener` marks media reload needed.
 5. `MediaPlayerController` reloads from DB when playlist reaches the last item,
    so new positions are applied without interrupting current playback.
+
+If position SSE detects incremental `id:` mismatch, the screen callback should
+trigger `MediaAgent.reinit(...)` to recover from potential missed position
+events.
+
+## Initial Refresh Behavior
+
+- On `MediaAgent.init()`, if a usable token already exists, `reinit(...)` runs
+  immediately (`downloadAll` + DB load + optional autoplay).
+- If no usable token exists yet, refresh runs after `AuthLoggedInEvent`.
+
+## Context Menu (Right Click)
+
+`MediaPlayerView` exposes a desktop context menu on right-click:
+
+- `Configure Server & Auth`: opens configuration/auth dialog (reuses
+  `ServerPropertiesFormView` + `AuthSection` stack)
+- `Reinitialize Media`: optional action via callback to trigger media reinit
+  after config/auth changes; test screen implementation restarts playback from
+  first media item after reinit
+
+`MediaPlayerView` constructor requires:
+
+- `serverPropertiesRegistryService` for config/auth dialog
+- optional `onReinitializeRequested` callback if host wants reinit action enabled
 
 ## Event Bus Contracts
 
@@ -88,7 +128,6 @@ Minimal example wiring for a screen that embeds the media player:
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:qms_revamped_content_desktop_client/core/config/app_config.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
@@ -101,7 +140,7 @@ class MyMediaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final serviceName = AppConfig.serviceName;
+    const serviceName = 'main-media';
     const tag = 'main';
 
     return Provider<MediaFeature>(
@@ -133,7 +172,18 @@ class MyMediaScreen extends StatelessWidget {
               serviceName: serviceName,
               tag: tag,
               eventManager: context.read<EventManager>(),
+              serverPropertiesRegistryService:
+                  context.read<ServerPropertiesRegistryService>(),
               controller: feature.playerController,
+              onReinitializeRequested: () async {
+                await feature.agent.reinit(
+                  autoPlay: true,
+                  startSynchronizer: true,
+                );
+                await feature.playerController.playFromFirst(
+                  reason: 'context_menu_reinitialize',
+                );
+              },
             ),
           );
         },

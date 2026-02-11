@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:openapi/api.dart';
+import 'package:qms_revamped_content_desktop_client/core/auth/auth_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/auth/event/auth_logged_in_event.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
@@ -25,9 +26,12 @@ class MediaSynchronizer {
 
   final EventManager _eventManager;
   final ServerPropertiesRegistryService _serverPropertiesRegistryService;
+  final OidcAuthService _authService;
   final MediaDownloaderBase _downloader;
   final MediaDeleterBase _deleter;
   final MediaReloadSignal _playerController;
+  final Future<void> Function(SseIncrementalIdMismatch mismatch)?
+  _sseIncrementalMismatchCallback;
   final SseClientFactory _sseClientFactory;
 
   StreamSubscription<AuthLoggedInEvent>? _authSub;
@@ -35,6 +39,7 @@ class MediaSynchronizer {
 
   bool _disposed = false;
   int _generation = 0;
+  bool _fullRefreshInFlight = false;
 
   MediaSynchronizer({
     required this.serviceName,
@@ -44,12 +49,22 @@ class MediaSynchronizer {
     required MediaDownloaderBase downloader,
     required MediaDeleterBase deleter,
     required MediaReloadSignal playerController,
+    Future<void> Function(SseIncrementalIdMismatch mismatch)?
+    sseIncrementalMismatchCallback,
+    OidcAuthService? authService,
     SseClientFactory? sseClientFactory,
   }) : _eventManager = eventManager,
        _serverPropertiesRegistryService = serverPropertiesRegistryService,
+       _authService =
+           authService ??
+           OidcAuthService(
+             serviceName: serviceName,
+             serverPropertiesRegistryService: serverPropertiesRegistryService,
+           ),
        _downloader = downloader,
        _deleter = deleter,
        _playerController = playerController,
+       _sseIncrementalMismatchCallback = sseIncrementalMismatchCallback,
        _sseClientFactory =
            sseClientFactory ?? ((options) => SseClient(options));
 
@@ -103,6 +118,13 @@ class MediaSynchronizer {
           'Media SSE stream ended; retrying in ${retryDelay.inSeconds}s (serviceName=$serviceName tag=$tag)',
         );
       } catch (e, st) {
+        if (_isUnauthorizedError(e)) {
+          try {
+            await _authService.getValidAccessToken(forceRefresh: true);
+          } catch (_) {
+            // Best-effort. The retry loop below will continue and report errors.
+          }
+        }
         MediaSynchronizerLogger.error(
           'Media subscribe failed; retrying in ${retryDelay.inSeconds}s (serviceName=$serviceName tag=$tag)',
           error: e,
@@ -132,10 +154,10 @@ class MediaSynchronizer {
       throw StateError('Missing serverAddress for serviceName=$serviceName');
     }
 
-    final token = sp.oidcAccessToken.trim();
+    final token = (await _authService.getValidAccessToken())?.trim() ?? '';
     if (token.isEmpty) {
       throw StateError(
-        'Missing access token for serviceName=$serviceName (login first)',
+        'Missing/expired access token for serviceName=$serviceName (login first)',
       );
     }
 
@@ -170,6 +192,14 @@ class MediaSynchronizer {
               );
               break;
           }
+        },
+        enableSseIncrementalIdMismatch: true,
+        shouldRefreshWhenIdMismatch: true,
+        sseIncrementalMismatchCallback: (mismatch) {
+          MediaSynchronizerLogger.warn(
+            'Media SSE incremental id mismatch (serviceName=$serviceName tag=$tag): $mismatch',
+          );
+          unawaited(_handleSseIncrementalMismatch(mismatch));
         },
       ),
     );
@@ -274,5 +304,45 @@ class MediaSynchronizer {
     _authSub = null;
 
     await _closeSseClient();
+  }
+
+  Future<void> _handleSseIncrementalMismatch(
+    SseIncrementalIdMismatch mismatch,
+  ) async {
+    if (_disposed) return;
+
+    final callback = _sseIncrementalMismatchCallback;
+    if (callback != null) {
+      await callback(mismatch);
+      return;
+    }
+
+    await _refreshFromBackend(reason: 'sse_incremental_id_mismatch');
+  }
+
+  Future<void> _refreshFromBackend({required String reason}) async {
+    if (_disposed || _fullRefreshInFlight) return;
+    _fullRefreshInFlight = true;
+
+    try {
+      MediaSynchronizerLogger.warn(
+        'Refreshing media from backend due to $reason (serviceName=$serviceName tag=$tag)',
+      );
+      await _downloader.downloadAll();
+      _playerController.markReloadNeeded();
+    } catch (e, st) {
+      MediaSynchronizerLogger.error(
+        'Full refresh failed after $reason (serviceName=$serviceName tag=$tag)',
+        error: e,
+        stackTrace: st,
+      );
+    } finally {
+      _fullRefreshInFlight = false;
+    }
+  }
+
+  bool _isUnauthorizedError(Object error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('401') || msg.contains('unauthorized');
   }
 }
