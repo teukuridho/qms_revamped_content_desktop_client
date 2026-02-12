@@ -22,8 +22,14 @@ This module follows the same patterns as `POSITION_UPDATE_SUBSCRIBER_AGENT.MD`:
 
 ## Inputs
 
-- `serviceName`: which server-properties row to use (same concept as other services)
+- `serviceName`: logical service identity (used in `server_properties`)
 - `tag`: media playlist tag (filtering for downloads + SSE)
+
+Server properties selection:
+
+- Config + Keycloak/OIDC tokens are loaded from `server_properties` by
+  `(serviceName, tag)`, not by `serviceName` alone. This allows multiple
+  instances of the same serviceName with different tags to run concurrently.
 
 Current app constants:
 
@@ -47,6 +53,13 @@ SSE fields:
 
 - Directory creation: `lib/media/storage/directory/media_storage_directory_service.dart`
 - Files are written under `AppDirectory/<media dir name>/` (default `media/`)
+- File naming: `MediaStorageFileService` sanitizes remote file names and
+  truncates long names (while preserving extension) to reduce Windows path/filename
+  length issues.
+- Download behavior: files are streamed into a unique temp file
+  `*.part.<timestamp>` and then finalized into place with retries + a copy
+  fallback (helps with transient Windows rename failures due to AV/indexing or
+  concurrent readers).
 - DB table: `lib/media/registry/entity/media.dart`
 
 ## Components (Code Map)

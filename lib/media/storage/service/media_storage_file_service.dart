@@ -33,6 +33,20 @@ class MediaStorageFileService {
     final raw = fileName.trim().isEmpty ? 'media' : fileName.trim();
     final normalized = raw.replaceAll('\\', '/').split('/').last;
     final safe = normalized.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    return '${remoteId}_$safe';
+
+    // Windows is sensitive to long filenames and long paths. Keep the final
+    // basename reasonably short while preserving extension when present.
+    final prefix = '${remoteId}_';
+    final ext = p.extension(safe);
+    final base = ext.isEmpty ? safe : p.basenameWithoutExtension(safe);
+
+    const maxFileNameLen = 180; // conservative; avoids common Windows limits
+    final maxBaseLen = (maxFileNameLen - prefix.length - ext.length)
+        .clamp(16, maxFileNameLen);
+    final clippedBase = base.length <= maxBaseLen
+        ? base
+        : base.substring(0, maxBaseLen);
+
+    return '$prefix$clippedBase$ext';
   }
 }
