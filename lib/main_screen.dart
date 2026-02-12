@@ -1,19 +1,66 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qms_revamped_content_desktop_client/core/config/app_config.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/settings/service/app_settings_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/settings/ui/settings_dialog.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent/currency_exchange_rate_feature.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/view/currency_exchange_rate_table_view.dart';
 import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
 import 'package:qms_revamped_content_desktop_client/media/player/ui/media_player_view.dart';
 import 'package:qms_revamped_content_desktop_client/product/agent/product_features.dart';
 import 'package:qms_revamped_content_desktop_client/product/view/product_table_view.dart';
+import 'package:window_manager/window_manager.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   final String branchName;
 
   const MainScreen({super.key, this.branchName = 'KCP MEDAN MALL'});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applySavedFullscreenIfNeeded();
+    });
+  }
+
+  bool get _isDesktop {
+    if (kIsWeb) return false;
+    return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  }
+
+  Future<void> _applySavedFullscreenIfNeeded() async {
+    if (!_isDesktop || !mounted) return;
+
+    final settings = context.read<AppSettingsService>();
+    final enabled = await settings.getFullscreenEnabled();
+
+    try {
+      final current = await windowManager.isFullScreen();
+      if (current == enabled) return;
+      await windowManager.setFullScreen(enabled);
+    } catch (_) {
+      // Ignore (e.g. unsupported platform/window not ready).
+    }
+  }
+
+  Future<void> _openSettings() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => const SettingsDialog(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +86,10 @@ class MainScreen extends StatelessWidget {
           // - exchange rate: 25%
           // - clock/date: 20%
           final headerH = usableH * 0.10;
-          final mediaH = usableH * 0.25;
-          final productH = usableH * 0.25;
-          final currencyH = usableH * 0.30;
-          final clockH = usableH * 0.10;
+          final mediaH = usableH * 0.30;
+          final productH = usableH * 0.23;
+          final currencyH = usableH * 0.29;
+          final clockH = usableH * 0.08;
 
           return Stack(
             children: [
@@ -59,7 +106,10 @@ class MainScreen extends StatelessWidget {
                     children: [
                       SizedBox(
                         height: headerH,
-                        child: _Header(branchName: branchName),
+                        child: _Header(
+                          branchName: widget.branchName,
+                          onSettingsRequested: _openSettings,
+                        ),
                       ),
                       SizedBox(height: gap),
                       SizedBox(
@@ -113,7 +163,7 @@ class MainScreen extends StatelessWidget {
                               child: ProductTableView(
                                 serviceName: AppConfig.productServiceName,
                                 tag: AppConfig.productSecondTag,
-                                nameHeader: 'PINJAMAN sd.1M',
+                                nameHeader: 'PINJAMAN',
                                 valueHeader: 'Suku Bunga (% p.a)',
                                 eventManager: context.read<EventManager>(),
                                 serverPropertiesRegistryService: context
@@ -165,60 +215,105 @@ class MainScreen extends StatelessWidget {
   }
 }
 
+enum _MainHeaderContextAction { settings }
+
 class _Header extends StatelessWidget {
   final String branchName;
+  final Future<void> Function() onSettingsRequested;
 
-  const _Header({required this.branchName});
+  const _Header({required this.branchName, required this.onSettingsRequested});
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final h = constraints.maxHeight;
-        final logoH = (h * 0.52).clamp(44.0, 110.0);
-        final gap = (h * 0.04).clamp(4.0, 10.0);
-        final textSize = (h * 0.20).clamp(18.0, 40.0);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (details) =>
+          _showContextMenu(context, details.globalPosition),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final h = constraints.maxHeight;
+          final logoH = (h * 0.52).clamp(44.0, 110.0);
+          // Reserve a little vertical space so the branch name doesn't feel cramped.
+          final reservedGap = (h * 0.04).clamp(4.0, 10.0);
+          final textSize = (h * 0.5).clamp(18.0, 40.0);
 
-        final text = branchName.toUpperCase();
-        final fittedSize = _fitFontSize(
-          text: text,
-          baseStyle: const TextStyle(
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-            letterSpacing: 1.5,
-            shadows: [Shadow(color: Color(0x88000000), blurRadius: 18)],
-          ),
-          minFontSize: 14,
-          maxFontSize: textSize,
-          maxWidth: constraints.maxWidth,
-          maxHeight: h - logoH - gap,
-        );
-
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/logo-bri-terbaru.png', height: logoH),
-            SizedBox(height: gap),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              style: TextStyle(
-                fontSize: fittedSize,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: 1.5,
-                shadows: const [
-                  Shadow(color: Color(0x88000000), blurRadius: 18),
-                ],
-              ),
+          final text = branchName.toUpperCase();
+          final fittedSize = _fitFontSize(
+            text: text,
+            baseStyle: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: 1.5,
+              shadows: [Shadow(color: Color(0x88000000), blurRadius: 18)],
             ),
-          ],
-        );
-      },
+            minFontSize: 14,
+            maxFontSize: textSize,
+            maxWidth: constraints.maxWidth,
+            maxHeight: h - logoH - reservedGap,
+          );
+
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/logo-bri-terbaru.png', height: logoH),
+              // SizedBox(height: gap),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: fittedSize,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 1.5,
+                  shadows: const [
+                    Shadow(color: Color(0x88000000), blurRadius: 18),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
+  }
+
+  Future<void> _showContextMenu(
+    BuildContext context,
+    Offset globalPosition,
+  ) async {
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
+    final renderObject = overlay.context.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.hasSize ||
+        !renderObject.attached) {
+      return;
+    }
+    final overlayBox = renderObject;
+
+    final action = await showMenu<_MainHeaderContextAction>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 0, 0),
+        Offset.zero & overlayBox.size,
+      ),
+      items: const [
+        PopupMenuItem<_MainHeaderContextAction>(
+          value: _MainHeaderContextAction.settings,
+          child: Text('Settings'),
+        ),
+      ],
+    );
+
+    if (action == null) return;
+    switch (action) {
+      case _MainHeaderContextAction.settings:
+        await onSettingsRequested();
+        break;
+    }
   }
 }
 
@@ -291,7 +386,7 @@ class _SystemClockAndDateState extends State<_SystemClockAndDate> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final h = constraints.maxHeight;
-        final gap = (h * 0.05).clamp(6.0, 14.0);
+        final gap = (h * 0.01).clamp(6.0, 14.0);
         final timeMaxSize = (h * 0.62).clamp(44.0, 160.0);
         final dateMaxSize = (h * 0.16).clamp(12.0, 42.0);
 

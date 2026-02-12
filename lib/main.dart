@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
@@ -11,6 +14,7 @@ import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/logging_bootstrap.dart';
 import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/settings/service/app_settings_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/test/ui/screen/server_properties_dialog_stress_screen.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent/currency_exchange_rate_feature.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/storage/directory/currency_exchange_rate_flag_storage_directory_service.dart';
@@ -19,11 +23,17 @@ import 'package:qms_revamped_content_desktop_client/media/storage/directory/medi
 import 'package:qms_revamped_content_desktop_client/product/agent/product_features.dart';
 
 import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
+import 'package:window_manager/window_manager.dart';
 
 Future<void> main() async {
   LoggingBootstrap.runZoned<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
     MediaKit.ensureInitialized();
+
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      await windowManager.ensureInitialized();
+    }
 
     await LoggingBootstrap.init();
 
@@ -43,6 +53,12 @@ Future<void> main() async {
           Provider(
             create: (context) =>
                 AppDatabaseManager(appDirectoryService: context.read()),
+          ),
+
+          // App Settings (local UI preferences)
+          Provider(
+            create: (context) =>
+                AppSettingsService(appDatabaseManager: context.read()),
           ),
 
           // Server properties

@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
+import 'package:qms_revamped_content_desktop_client/core/settings/entity/app_settings.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/entity/server_properties.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/registry/entity/currency_exchange_rate.dart';
 import 'package:qms_revamped_content_desktop_client/media/registry/entity/media.dart';
@@ -17,7 +18,13 @@ import 'app_database.steps.dart';
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [Media, ServerProperties, CurrencyExchangeRates, Products],
+  tables: [
+    Media,
+    ServerProperties,
+    CurrencyExchangeRates,
+    Products,
+    AppSettings,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   static final AppLog _log = AppLog('db_migrate');
@@ -27,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -104,22 +111,22 @@ class AppDatabase extends _$AppDatabase {
       );
 
       if (from < 7) {
-        await migrateToV7(m, from, 7);
+        await migrateToV7(m, from, to < 7 ? to : 7);
       }
 
-      if (from < 8) {
+      if (to >= 8 && from < 8) {
         await m.createTable(currencyExchangeRates);
       }
 
-      if (from >= 8 && from < 9) {
+      if (to >= 9 && from >= 8 && from < 9) {
         await _migrateCurrencyExchangeRateBuySellToReal();
       }
 
-      if (from < 10) {
+      if (to >= 10 && from < 10) {
         await m.createTable(products);
       }
 
-      if (from < 11) {
+      if (to >= 11 && from < 11) {
         // `server_properties` is now keyed by (serviceName, tag).
         // Do not use `TableMigration(serverProperties)` here: older databases
         // may not have the `tag` column yet and the generated copy statement
@@ -127,7 +134,7 @@ class AppDatabase extends _$AppDatabase {
         await _ensureServerPropertiesTagExistsAndUnique();
       }
 
-      if (from < 12) {
+      if (to >= 12 && from < 12) {
         // Defensive migration for older/dirty databases:
         // - Ensure tag/content_type/mime_type columns exist where expected.
         // - Ensure server_properties has tag and a uniqueness constraint by
@@ -136,11 +143,15 @@ class AppDatabase extends _$AppDatabase {
         await _ensureServerPropertiesTagExistsAndUnique();
       }
 
-      if (from < 13) {
+      if (to >= 13 && from < 13) {
         // Re-run defensive checks in case a previous upgrade attempt partially
         // applied schema changes but left the DB in an inconsistent state.
         await _ensureMediaTagColumnsExist();
         await _ensureServerPropertiesTagExistsAndUnique();
+      }
+
+      if (to >= 14 && from < 14) {
+        await m.createTable(appSettings);
       }
     },
   );

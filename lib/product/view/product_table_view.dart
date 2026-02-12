@@ -44,9 +44,9 @@ class _ProductTableViewState extends State<ProductTableView> {
   static const Color _panelBg = Color(0xCC061B3E);
   static const Color _panelBorder = Color(0xFF0A3C86);
   static const Color _headerBg = Color(0xFF1F8C31);
-  static const Color _headerText = Color(0xFFE7EA44);
+  static const Color _headerText = Color(0xFF46FF46);
   static const Color _rowText = Colors.white;
-  static const Color _valueText = Color(0xFF46FF46);
+  static const Color _valueText = Color(0xFFE7EA44);
 
   static const double _headerRowHeight = 46;
   static const double _bodyRowHeight = 54;
@@ -57,7 +57,7 @@ class _ProductTableViewState extends State<ProductTableView> {
   static const Duration _autoScrollReferenceTick = Duration(milliseconds: 32);
 
   static const Map<int, TableColumnWidth> _tableColumnWidths =
-      <int, TableColumnWidth>{0: FlexColumnWidth(3), 1: FlexColumnWidth(2)};
+      <int, TableColumnWidth>{0: FlexColumnWidth(1), 1: FlexColumnWidth(1)};
 
   StreamSubscription<ProductDownloadStartedEvent>? _dlStartSub;
   StreamSubscription<ProductDownloadSucceededEvent>? _dlOkSub;
@@ -272,22 +272,19 @@ class _ProductTableViewState extends State<ProductTableView> {
   }
 
   Widget _buildHeaderRow(BuildContext context) {
-    return ColoredBox(
-      color: _headerBg,
-      child: Table(
-        columnWidths: _tableColumnWidths,
-        children: [
-          TableRow(
-            children: [
-              _TableHeaderCell(label: widget.nameHeader),
-              _TableHeaderCell(
-                label: widget.valueHeader,
-                alignment: Alignment.centerRight,
-              ),
-            ],
-          ),
-        ],
-      ),
+    return Table(
+      columnWidths: _tableColumnWidths,
+      children: [
+        TableRow(
+          children: [
+            _TableHeaderCell(label: widget.nameHeader),
+            _TableHeaderCell(
+              label: widget.valueHeader,
+              alignment: Alignment.centerRight,
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -306,8 +303,8 @@ class _ProductTableViewState extends State<ProductTableView> {
                     row.name,
                     style: const TextStyle(
                       color: _rowText,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                       height: 1.0,
                     ),
                     maxLines: 1,
@@ -320,7 +317,7 @@ class _ProductTableViewState extends State<ProductTableView> {
                     style: const TextStyle(
                       fontFamily: _digitalFamily,
                       color: _valueText,
-                      fontSize: 38,
+                      fontSize: 20,
                       height: 0.9,
                       shadows: [
                         Shadow(color: Color(0x66000000), blurRadius: 14),
@@ -501,8 +498,8 @@ class _TableHeaderCell extends StatelessWidget {
           child: Text(
             label,
             style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
               color: _ProductTableViewState._headerText,
               letterSpacing: 0.6,
               height: 1.0,

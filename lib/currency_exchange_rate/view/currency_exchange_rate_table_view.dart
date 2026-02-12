@@ -42,7 +42,7 @@ class _CurrencyExchangeRateTableViewState
 
   static const Color _panelBg = Color(0xCC061B3E);
   static const Color _panelBorder = Color(0xFF0A3C86);
-  static const Color _headerText = Color(0xFFE7EA44);
+  static const Color _headerText = Color(0xFF46FF46);
   static const Color _rowText = Colors.white;
   static const Color _valueText = Color(0xFFFF3A3A);
 
@@ -68,17 +68,17 @@ class _CurrencyExchangeRateTableViewState
     );
 
     return <int, TableColumnWidth>{
-      0: const FixedColumnWidth(90),
-      1: const FlexColumnWidth(3),
-      2: const FlexColumnWidth(2),
+      0: const FixedColumnWidth(70),
+      1: const FlexColumnWidth(6),
+      2: const FlexColumnWidth(3),
       // Keep BUY/SELL equal width and enforce a minimum.
       3: MinColumnWidth(
         FixedColumnWidth(buySellMinWidth),
-        const FlexColumnWidth(2),
+        const FlexColumnWidth(4),
       ),
       4: MinColumnWidth(
         FixedColumnWidth(buySellMinWidth),
-        const FlexColumnWidth(2),
+        const FlexColumnWidth(4),
       ),
     };
   }
@@ -321,11 +321,11 @@ class _CurrencyExchangeRateTableViewState
             _TableHeaderCell(label: ''),
             _TableHeaderCell(label: ''),
             _TableHeaderCell(
-              label: 'KURS BELI',
+              label: 'BELI',
               alignment: Alignment.centerRight,
             ),
             _TableHeaderCell(
-              label: 'KURS JUAL',
+              label: 'JUAL',
               alignment: Alignment.centerRight,
             ),
           ],
@@ -350,11 +350,11 @@ class _CurrencyExchangeRateTableViewState
                 _buildBodyCell(_buildFlag(row.flagImagePath)),
                 _buildBodyCell(
                   Text(
-                    row.countryName,
+                    row.countryName.toUpperCase(),
                     style: const TextStyle(
                       color: _rowText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                       height: 1.0,
                     ),
                     maxLines: 1,
@@ -366,8 +366,8 @@ class _CurrencyExchangeRateTableViewState
                     row.currencyCode,
                     style: const TextStyle(
                       color: _rowText,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
                       height: 1.0,
                     ),
                     maxLines: 1,
@@ -380,8 +380,8 @@ class _CurrencyExchangeRateTableViewState
                     style: const TextStyle(
                       fontFamily: _digitalFamily,
                       color: _valueText,
-                      fontSize: 25,
-                      height: 0.9,
+                      fontSize: 20,
+                      height: 1,
                       shadows: [
                         Shadow(color: Color(0x66000000), blurRadius: 14),
                         Shadow(color: Color(0x33000000), blurRadius: 28),
@@ -399,8 +399,8 @@ class _CurrencyExchangeRateTableViewState
                     style: const TextStyle(
                       fontFamily: _digitalFamily,
                       color: _valueText,
-                      fontSize: 25,
-                      height: 0.9,
+                      fontSize: 20,
+                      height: 1,
                       shadows: [
                         Shadow(color: Color(0x66000000), blurRadius: 14),
                         Shadow(color: Color(0x33000000), blurRadius: 28),
@@ -471,6 +471,7 @@ class _CurrencyExchangeRateTableViewState
   }
 
   static String _formatFixedAmount(double value) {
+    // return value.round().toString();
     final negative = value < 0;
     final fixed = value.abs().toStringAsFixed(2);
     final parts = fixed.split('.');
@@ -618,7 +619,7 @@ class _TableHeaderCell extends StatelessWidget {
           child: Text(
             label,
             style: const TextStyle(
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               fontSize: 18,
               color: _CurrencyExchangeRateTableViewState._headerText,
               letterSpacing: 0.6,
