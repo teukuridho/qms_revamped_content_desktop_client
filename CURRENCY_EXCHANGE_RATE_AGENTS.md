@@ -100,6 +100,7 @@ Proposed module root: `lib/currency_exchange_rate/`
 - `storage/service/currency_exchange_rate_flag_storage_file_service.dart`
 - `view/currency_exchange_rate_table_view.dart`
 - `test/ui/screen/currency_exchange_rate_test_screen.dart`
+- shared utility: `lib/core/utility/looping_vertical_auto_scroll.dart`
 
 ## Runtime Flow
 
@@ -138,12 +139,29 @@ Table columns:
 Formatting:
 
 - `BUY` and `SELL` must be rendered as formatted decimal/currency values
+- header cells support alignment override (`_TableHeaderCell.alignment`)
+- `BUY` and `SELL` header labels are right-aligned (`Alignment.centerRight`)
+- vertical auto-scroll behavior uses shared `AutoScrollCoordinator` contract
 
 Minimum behavior:
 
 - starts empty/loading
 - updates automatically after initial download, CRUD events, and position updates
 - does not require app restart for remote changes
+- table header (`FLAG | COUNTRY NAME | CURRENCY_CODE | BUY | SELL`) is sticky
+  while vertical scrolling
+- table body auto-scrolls when rows overflow viewport height
+- after auto-scroll reaches bottom, scroll offset resets to `0` and loops again
+- auto-scroll behavior re-evaluates on layout/window size changes
+
+Implementation reference:
+
+- table view integration:
+  `lib/currency_exchange_rate/view/currency_exchange_rate_table_view.dart`
+- shared auto-scroll module:
+  `lib/core/utility/looping_vertical_auto_scroll.dart`
+- module notes:
+  `AUTO_SCROLL_AGENTS.md`
 
 Dialog lifecycle note:
 

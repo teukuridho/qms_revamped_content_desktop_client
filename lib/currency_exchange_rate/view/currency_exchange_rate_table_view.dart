@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
 import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view/server_properties_configuration_dialog.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/utility/looping_vertical_auto_scroll.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/downloader/event/currency_exchange_rate_download_events.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/registry/service/currency_exchange_rate_registry_service.dart';
 
@@ -36,15 +38,35 @@ class CurrencyExchangeRateTableView extends StatefulWidget {
 
 class _CurrencyExchangeRateTableViewState
     extends State<CurrencyExchangeRateTableView> {
+  static const double _minTableWidth = 900;
+  static const double _headerRowHeight = 46;
+  static const double _bodyRowHeight = 54;
+
+  static const Map<int, TableColumnWidth> _tableColumnWidths =
+      <int, TableColumnWidth>{
+        0: FixedColumnWidth(90),
+        1: FlexColumnWidth(3),
+        2: FlexColumnWidth(2),
+        3: FlexColumnWidth(2),
+        4: FlexColumnWidth(2),
+      };
+
   StreamSubscription<CurrencyExchangeRateDownloadStartedEvent>? _dlStartSub;
   StreamSubscription<CurrencyExchangeRateDownloadSucceededEvent>? _dlOkSub;
   StreamSubscription<CurrencyExchangeRateDownloadFailedEvent>? _dlFailSub;
+  final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
+  late final AutoScrollCoordinator _verticalAutoScrollCoordinator;
   bool _reinitializeInProgress = false;
   ScaffoldMessengerState? _messenger;
 
   @override
   void initState() {
     super.initState();
+    _verticalAutoScrollCoordinator = LoopingVerticalAutoScrollCoordinator(
+      controller: _verticalScrollController,
+      step: 0.3,
+    )..attach();
 
     _dlStartSub = widget.eventManager
         .listen<CurrencyExchangeRateDownloadStartedEvent>()
@@ -111,6 +133,9 @@ class _CurrencyExchangeRateTableViewState
 
   @override
   void dispose() {
+    _verticalAutoScrollCoordinator.detach();
+    _horizontalScrollController.dispose();
+    _verticalScrollController.dispose();
     // ignore: discarded_futures
     _dlStartSub?.cancel();
     // ignore: discarded_futures
@@ -122,6 +147,8 @@ class _CurrencyExchangeRateTableViewState
 
   @override
   Widget build(BuildContext context) {
+    _verticalAutoScrollCoordinator.scheduleSync();
+
     final content = StreamBuilder<List<CurrencyExchangeRate>>(
       stream: widget.registryService.watchAllByTagOrdered(tag: widget.tag),
       builder: (context, snapshot) {
@@ -147,37 +174,110 @@ class _CurrencyExchangeRateTableViewState
   Widget _buildTable(List<CurrencyExchangeRate> rows) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('FLAG')),
-                  DataColumn(label: Text('COUNTRY NAME')),
-                  DataColumn(label: Text('CURRENCY_CODE')),
-                  DataColumn(label: Text('BUY')),
-                  DataColumn(label: Text('SELL')),
-                ],
-                rows: rows
-                    .map(
-                      (row) => DataRow(
-                        cells: [
-                          DataCell(_buildFlag(row.flagImagePath)),
-                          DataCell(Text(row.countryName)),
-                          DataCell(Text(row.currencyCode)),
-                          DataCell(Text(_formatFixedAmount(row.buy))),
-                          DataCell(Text(_formatFixedAmount(row.sell))),
-                        ],
+        final tableWidth = math.max(constraints.maxWidth, _minTableWidth);
+        final tableHeight = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : (_headerRowHeight + (rows.length * _bodyRowHeight));
+
+        return NotificationListener<ScrollMetricsNotification>(
+          onNotification: (_) {
+            _verticalAutoScrollCoordinator.onScrollMetricsChanged();
+            return false;
+          },
+          child: Scrollbar(
+            controller: _horizontalScrollController,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _horizontalScrollController,
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: tableWidth,
+                height: tableHeight,
+                child: Column(
+                  children: [
+                    _buildHeaderRow(context),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: Scrollbar(
+                        controller: _verticalScrollController,
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          controller: _verticalScrollController,
+                          child: _buildBodyTable(rows),
+                        ),
                       ),
-                    )
-                    .toList(growable: false),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHeaderRow(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Table(
+        columnWidths: _tableColumnWidths,
+        children: const [
+          TableRow(
+            children: [
+              _TableHeaderCell(label: 'FLAG'),
+              _TableHeaderCell(label: 'COUNTRY NAME'),
+              _TableHeaderCell(label: 'CURRENCY CODE'),
+              _TableHeaderCell(label: 'BUY', alignment: Alignment.centerRight),
+              _TableHeaderCell(label: 'SELL', alignment: Alignment.centerRight),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBodyTable(List<CurrencyExchangeRate> rows) {
+    final divider = Divider.createBorderSide(context, width: 1);
+
+    return Table(
+      columnWidths: _tableColumnWidths,
+      border: TableBorder(horizontalInside: divider),
+      children: rows
+          .map(
+            (row) => TableRow(
+              children: [
+                _buildBodyCell(_buildFlag(row.flagImagePath)),
+                _buildBodyCell(Text(row.countryName)),
+                _buildBodyCell(Text(row.currencyCode)),
+                _buildBodyCell(
+                  Text(_formatFixedAmount(row.buy), textAlign: TextAlign.right),
+                  alignment: Alignment.centerRight,
+                ),
+                _buildBodyCell(
+                  Text(
+                    _formatFixedAmount(row.sell),
+                    textAlign: TextAlign.right,
+                  ),
+                  alignment: Alignment.centerRight,
+                ),
+              ],
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  Widget _buildBodyCell(
+    Widget child, {
+    Alignment alignment = Alignment.centerLeft,
+  }) {
+    return SizedBox(
+      height: _bodyRowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Align(alignment: alignment, child: child),
+      ),
     );
   }
 
@@ -321,5 +421,32 @@ class _CurrencyExchangeRateTableViewState
         });
       }
     }
+  }
+}
+
+class _TableHeaderCell extends StatelessWidget {
+  final String label;
+  final Alignment alignment;
+
+  const _TableHeaderCell({
+    required this.label,
+    this.alignment = Alignment.centerLeft,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _CurrencyExchangeRateTableViewState._headerRowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Align(
+          alignment: alignment,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
   }
 }
