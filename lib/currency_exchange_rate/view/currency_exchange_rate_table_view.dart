@@ -462,7 +462,8 @@ class _CurrencyExchangeRateTableViewState
       width: 46,
       height: 30,
       child: Image.file(
-        File(imagePath),1
+        File(imagePath),
+        fit: BoxFit.fill,
         errorBuilder: (_, error, stackTrace) =>
             const Icon(Icons.broken_image_outlined),
       ),
