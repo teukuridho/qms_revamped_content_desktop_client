@@ -44,7 +44,7 @@ class _CurrencyExchangeRateTableViewState
   static const double _bodyDividerWidth = 1;
   static const int _infiniteLoopCopies = 5;
   static const int _infiniteWrapBufferRows = 3;
-  static const double _autoScrollStep = 3;
+  static const double _autoScrollStep = 1.2;
   static const Duration _autoScrollReferenceTick = Duration(milliseconds: 32);
 
   static const Map<int, TableColumnWidth> _tableColumnWidths =
@@ -231,12 +231,16 @@ class _CurrencyExchangeRateTableViewState
           controller: _verticalScrollController,
           child: _buildBodyTable(visibleRows),
         );
+        final verticalBodyWithoutAutoScrollbar = ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: verticalBodyScrollView,
+        );
         final verticalScrollable = _useInfiniteLoop
-            ? verticalBodyScrollView
+            ? verticalBodyWithoutAutoScrollbar
             : Scrollbar(
                 controller: _verticalScrollController,
                 thumbVisibility: true,
-                child: verticalBodyScrollView,
+                child: verticalBodyWithoutAutoScrollbar,
               );
 
         return NotificationListener<ScrollMetricsNotification>(
