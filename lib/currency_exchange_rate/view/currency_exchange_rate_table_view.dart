@@ -54,14 +54,43 @@ class _CurrencyExchangeRateTableViewState
   static const double _autoScrollStep = 1.2;
   static const Duration _autoScrollReferenceTick = Duration(milliseconds: 32);
 
-  static const Map<int, TableColumnWidth> _tableColumnWidths =
-      <int, TableColumnWidth>{
-        0: FixedColumnWidth(90),
-        1: FlexColumnWidth(3),
-        2: FlexColumnWidth(2),
-        3: FlexColumnWidth(2),
-        4: FlexColumnWidth(2),
-      };
+  Map<int, TableColumnWidth> _buildColumnWidths(double tableWidth) {
+    const cellPaddingH = 12.0; // matches _buildBodyCell padding
+    const valueStyle = TextStyle(fontFamily: _digitalFamily, fontSize: 38);
+
+    // Ensure BUY/SELL columns can fit at least 8 characters (and typical
+    // formatted values with separators) without shrinking.
+    const sample = '88,888.88';
+    final sampleWidth = _measureTextWidth(sample, valueStyle);
+    final buySellMinWidth = (sampleWidth + (cellPaddingH * 2) + 8).clamp(
+      160.0,
+      tableWidth,
+    );
+
+    return <int, TableColumnWidth>{
+      0: const FixedColumnWidth(90),
+      1: const FlexColumnWidth(3),
+      2: const FlexColumnWidth(2),
+      // Keep BUY/SELL equal width and enforce a minimum.
+      3: MinColumnWidth(
+        FixedColumnWidth(buySellMinWidth),
+        const FlexColumnWidth(2),
+      ),
+      4: MinColumnWidth(
+        FixedColumnWidth(buySellMinWidth),
+        const FlexColumnWidth(2),
+      ),
+    };
+  }
+
+  static double _measureTextWidth(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    return painter.width;
+  }
 
   StreamSubscription<CurrencyExchangeRateDownloadStartedEvent>? _dlStartSub;
   StreamSubscription<CurrencyExchangeRateDownloadSucceededEvent>? _dlOkSub;
@@ -215,6 +244,7 @@ class _CurrencyExchangeRateTableViewState
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableWidth = constraints.maxWidth;
+        final columnWidths = _buildColumnWidths(tableWidth);
         final tableHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : (_headerRowHeight + (rows.length * _bodyRowHeight));
@@ -239,7 +269,7 @@ class _CurrencyExchangeRateTableViewState
         _verticalAutoScrollCoordinator.scheduleSync();
         final verticalBodyScrollView = SingleChildScrollView(
           controller: _verticalScrollController,
-          child: _buildBodyTable(visibleRows),
+          child: _buildBodyTable(visibleRows, columnWidths),
         );
         final verticalBodyWithoutAutoScrollbar = ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
@@ -265,7 +295,7 @@ class _CurrencyExchangeRateTableViewState
                 height: tableHeight,
                 child: Column(
                   children: [
-                    _buildHeaderRow(context),
+                    _buildHeaderRow(context, columnWidths),
                     const Divider(height: 1, thickness: 1, color: _panelBorder),
                     Expanded(child: verticalScrollable),
                   ],
@@ -278,9 +308,12 @@ class _CurrencyExchangeRateTableViewState
     );
   }
 
-  Widget _buildHeaderRow(BuildContext context) {
+  Widget _buildHeaderRow(
+    BuildContext context,
+    Map<int, TableColumnWidth> columnWidths,
+  ) {
     return Table(
-      columnWidths: _tableColumnWidths,
+      columnWidths: columnWidths,
       children: const [
         TableRow(
           children: [
@@ -301,11 +334,14 @@ class _CurrencyExchangeRateTableViewState
     );
   }
 
-  Widget _buildBodyTable(List<CurrencyExchangeRate> rows) {
+  Widget _buildBodyTable(
+    List<CurrencyExchangeRate> rows,
+    Map<int, TableColumnWidth> columnWidths,
+  ) {
     final divider = BorderSide(color: _panelBorder, width: 1);
 
     return Table(
-      columnWidths: _tableColumnWidths,
+      columnWidths: columnWidths,
       border: TableBorder(horizontalInside: divider),
       children: rows
           .map(
@@ -317,8 +353,8 @@ class _CurrencyExchangeRateTableViewState
                     row.countryName,
                     style: const TextStyle(
                       color: _rowText,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                       height: 1.0,
                     ),
                     maxLines: 1,
@@ -344,7 +380,7 @@ class _CurrencyExchangeRateTableViewState
                     style: const TextStyle(
                       fontFamily: _digitalFamily,
                       color: _valueText,
-                      fontSize: 38,
+                      fontSize: 25,
                       height: 0.9,
                       shadows: [
                         Shadow(color: Color(0x66000000), blurRadius: 14),
@@ -363,7 +399,7 @@ class _CurrencyExchangeRateTableViewState
                     style: const TextStyle(
                       fontFamily: _digitalFamily,
                       color: _valueText,
-                      fontSize: 38,
+                      fontSize: 25,
                       height: 0.9,
                       shadows: [
                         Shadow(color: Color(0x66000000), blurRadius: 14),
@@ -426,8 +462,7 @@ class _CurrencyExchangeRateTableViewState
       width: 46,
       height: 30,
       child: Image.file(
-        File(imagePath),
-        fit: BoxFit.cover,
+        File(imagePath),1
         errorBuilder: (_, error, stackTrace) =>
             const Icon(Icons.broken_image_outlined),
       ),
@@ -589,6 +624,9 @@ class _TableHeaderCell extends StatelessWidget {
               height: 1.0,
               shadows: [Shadow(color: Color(0x66000000), blurRadius: 10)],
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
           ),
         ),
       ),

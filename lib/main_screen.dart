@@ -40,9 +40,9 @@ class MainScreen extends StatelessWidget {
           // - clock/date: 20%
           final headerH = usableH * 0.10;
           final mediaH = usableH * 0.25;
-          final productH = usableH * 0.20;
-          final currencyH = usableH * 0.25;
-          final clockH = usableH * 0.20;
+          final productH = usableH * 0.25;
+          final currencyH = usableH * 0.30;
+          final clockH = usableH * 0.10;
 
           return Stack(
             children: [
@@ -175,31 +175,47 @@ class _Header extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final h = constraints.maxHeight;
-        final logoH = (h * 0.58).clamp(52.0, 120.0);
-        final gap = (h * 0.06).clamp(6.0, 12.0);
-        final textSize = (h * 0.20).clamp(20.0, 44.0);
+        final logoH = (h * 0.52).clamp(44.0, 110.0);
+        final gap = (h * 0.04).clamp(4.0, 10.0);
+        final textSize = (h * 0.20).clamp(18.0, 40.0);
 
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/logo-bri-terbaru.png', height: logoH),
-              SizedBox(height: gap),
-              Text(
-                branchName.toUpperCase(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: textSize,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 1.5,
-                  shadows: const [
-                    Shadow(color: Color(0x88000000), blurRadius: 18),
-                  ],
-                ),
-              ),
-            ],
+        final text = branchName.toUpperCase();
+        final fittedSize = _fitFontSize(
+          text: text,
+          baseStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+            letterSpacing: 1.5,
+            shadows: [Shadow(color: Color(0x88000000), blurRadius: 18)],
           ),
+          minFontSize: 14,
+          maxFontSize: textSize,
+          maxWidth: constraints.maxWidth,
+          maxHeight: h - logoH - gap,
+        );
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/logo-bri-terbaru.png', height: logoH),
+            SizedBox(height: gap),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(
+                fontSize: fittedSize,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: 1.5,
+                shadows: const [
+                  Shadow(color: Color(0x88000000), blurRadius: 18),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -275,15 +291,40 @@ class _SystemClockAndDateState extends State<_SystemClockAndDate> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final h = constraints.maxHeight;
-        final timeSize = (h * 0.72).clamp(52.0, 160.0);
         final gap = (h * 0.05).clamp(6.0, 14.0);
-        final dateSize = (h * 0.18).clamp(14.0, 42.0);
+        final timeMaxSize = (h * 0.62).clamp(44.0, 160.0);
+        final dateMaxSize = (h * 0.16).clamp(12.0, 42.0);
 
-        final content = Column(
-          mainAxisSize: MainAxisSize.min,
+        final timeSize = _fitFontSize(
+          text: timeText,
+          baseStyle: const TextStyle(fontFamily: _digitalFamily, height: 0.9),
+          minFontSize: 28,
+          maxFontSize: timeMaxSize,
+          maxWidth: constraints.maxWidth,
+          maxHeight: h - gap - dateMaxSize,
+        );
+
+        final dateSize = _fitFontSize(
+          text: dateText,
+          baseStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            shadows: [Shadow(color: Color(0x66000000), blurRadius: 18)],
+          ),
+          minFontSize: 10,
+          maxFontSize: dateMaxSize,
+          maxWidth: constraints.maxWidth,
+          maxHeight: dateMaxSize + 6,
+        );
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               timeText,
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              softWrap: false,
               style: TextStyle(
                 fontFamily: _digitalFamily,
                 fontSize: timeSize,
@@ -299,6 +340,9 @@ class _SystemClockAndDateState extends State<_SystemClockAndDate> {
             Text(
               dateText,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
               style: TextStyle(
                 fontSize: dateSize,
                 fontWeight: FontWeight.w700,
@@ -311,17 +355,47 @@ class _SystemClockAndDateState extends State<_SystemClockAndDate> {
             ),
           ],
         );
-
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
-            child: content,
-          ),
-        );
       },
     );
   }
+}
+
+double _fitFontSize({
+  required String text,
+  required TextStyle baseStyle,
+  required double minFontSize,
+  required double maxFontSize,
+  required double maxWidth,
+  required double maxHeight,
+}) {
+  if (maxWidth <= 0 || maxHeight <= 0) return minFontSize;
+
+  var lo = minFontSize;
+  var hi = maxFontSize;
+  var best = minFontSize;
+
+  for (var i = 0; i < 10; i++) {
+    final mid = (lo + hi) / 2;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: baseStyle.copyWith(fontSize: mid),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: maxWidth);
+
+    final fits = painter.width <= maxWidth && painter.height <= maxHeight;
+    if (fits) {
+      best = mid;
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  return best;
 }
 
 class Ticker {
