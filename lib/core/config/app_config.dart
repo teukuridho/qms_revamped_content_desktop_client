@@ -12,5 +12,6 @@ class AppConfig {
       'currency_exchange_rate';
   static const String currencyExchangeRateTag = 'main';
   static const String productServiceName = 'product';
-  static const String productTag = 'main';
+  static const String productTag = 'main'; // left table
+  static const String productSecondTag = 'second'; // right table
 }

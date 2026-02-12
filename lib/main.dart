@@ -16,7 +16,7 @@ import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/storage/directory/currency_exchange_rate_flag_storage_directory_service.dart';
 import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
 import 'package:qms_revamped_content_desktop_client/media/storage/directory/media_storage_directory_service.dart';
-import 'package:qms_revamped_content_desktop_client/product/agent/product_feature.dart';
+import 'package:qms_revamped_content_desktop_client/product/agent/product_features.dart';
 
 import 'package:media_kit/media_kit.dart'; // Provides [Player], [Media], [Playlist] etc.
 
@@ -99,18 +99,21 @@ Future<void> main() async {
               feature.agent.dispose();
             },
           ),
-          Provider<ProductFeature>(
-            create: (context) => ProductFeature.create(
+          Provider<ProductFeatures>(
+            create: (context) => ProductFeatures.create(
               serviceName: AppConfig.productServiceName,
-              tag: AppConfig.productTag,
+              mainTag: AppConfig.productTag,
+              secondTag: AppConfig.productSecondTag,
               eventManager: context.read<EventManager>(),
               appDatabaseManager: context.read<AppDatabaseManager>(),
               serverPropertiesRegistryService: context
                   .read<ServerPropertiesRegistryService>(),
             ),
-            dispose: (context, feature) {
-              // ignore: discarded_futures
-              feature.agent.dispose();
+            dispose: (context, features) {
+              for (final f in features.all) {
+                // ignore: discarded_futures
+                f.agent.dispose();
+              }
             },
           ),
           Provider<List<PositionUpdateSubscriber>>(
@@ -139,6 +142,14 @@ Future<void> main() async {
                 serverPropertiesRegistryService: context
                     .read<ServerPropertiesRegistryService>(),
               ),
+              PositionUpdateSubscriber(
+                serviceName: AppConfig.productServiceName,
+                tag: AppConfig.productSecondTag,
+                sseIncrementalMismatchCallback: (_) {},
+                eventManager: context.read<EventManager>(),
+                serverPropertiesRegistryService: context
+                    .read<ServerPropertiesRegistryService>(),
+              ),
             ],
             dispose: (context, subscribers) {
               for (final subscriber in subscribers) {
@@ -157,7 +168,7 @@ Future<void> main() async {
               mediaFeature: context.read<MediaFeature>(),
               currencyExchangeRateFeature: context
                   .read<CurrencyExchangeRateFeature>(),
-              productFeature: context.read<ProductFeature>(),
+              productFeatures: context.read<ProductFeatures>(),
               positionUpdateSubscribers: context
                   .read<List<PositionUpdateSubscriber>>(),
             ),
@@ -203,6 +214,7 @@ class _MyAppTwoState extends State<MyAppTwo> {
 
     return MaterialApp(
       title: "QMS Content",
+      debugShowCheckedModeBanner: false,
       home: InitScreen(
         model: Provider.of<InitViewModel>(context, listen: false),
         serverPropertiesRegistryService:

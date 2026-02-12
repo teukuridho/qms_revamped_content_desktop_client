@@ -39,6 +39,15 @@ class ProductTableView extends StatefulWidget {
 }
 
 class _ProductTableViewState extends State<ProductTableView> {
+  static const String _digitalFamily = 'Digital7';
+
+  static const Color _panelBg = Color(0xCC061B3E);
+  static const Color _panelBorder = Color(0xFF0A3C86);
+  static const Color _headerBg = Color(0xFF1F8C31);
+  static const Color _headerText = Color(0xFFE7EA44);
+  static const Color _rowText = Colors.white;
+  static const Color _valueText = Color(0xFF46FF46);
+
   static const double _headerRowHeight = 46;
   static const double _bodyRowHeight = 54;
   static const double _bodyDividerWidth = 1;
@@ -179,7 +188,9 @@ class _ProductTableViewState extends State<ProductTableView> {
         }
         final rows = snapshot.data ?? const <Product>[];
         if (rows.isEmpty) {
-          return const Center(child: Text('No products'));
+          return const Center(
+            child: Text('No products', style: TextStyle(color: _rowText)),
+          );
         }
 
         return _buildTable(rows);
@@ -227,28 +238,32 @@ class _ProductTableViewState extends State<ProductTableView> {
           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
           child: verticalBodyScrollView,
         );
-        final verticalScrollable = _useInfiniteLoop
-            ? verticalBodyWithoutAutoScrollbar
-            : Scrollbar(
-                controller: _verticalScrollController,
-                thumbVisibility: true,
-                child: verticalBodyWithoutAutoScrollbar,
-              );
+        // Kiosk UI: no visible scrollbars.
+        final verticalScrollable = verticalBodyWithoutAutoScrollbar;
 
         return NotificationListener<ScrollMetricsNotification>(
           onNotification: (_) {
             _verticalAutoScrollCoordinator.onScrollMetricsChanged();
             return false;
           },
-          child: SizedBox(
-            width: tableWidth,
-            height: tableHeight,
-            child: Column(
-              children: [
-                _buildHeaderRow(context),
-                const Divider(height: 1),
-                Expanded(child: verticalScrollable),
-              ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: _panelBg,
+                border: Border.all(color: _panelBorder, width: 3),
+              ),
+              child: SizedBox(
+                width: tableWidth,
+                height: tableHeight,
+                child: Column(
+                  children: [
+                    _buildHeaderRow(context),
+                    const Divider(height: 1, thickness: 1, color: _panelBorder),
+                    Expanded(child: verticalScrollable),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -258,7 +273,7 @@ class _ProductTableViewState extends State<ProductTableView> {
 
   Widget _buildHeaderRow(BuildContext context) {
     return ColoredBox(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      color: _headerBg,
       child: Table(
         columnWidths: _tableColumnWidths,
         children: [
@@ -277,7 +292,7 @@ class _ProductTableViewState extends State<ProductTableView> {
   }
 
   Widget _buildBodyTable(List<Product> rows) {
-    final divider = Divider.createBorderSide(context, width: 1);
+    final divider = BorderSide(color: _panelBorder, width: 1);
 
     return Table(
       columnWidths: _tableColumnWidths,
@@ -287,11 +302,31 @@ class _ProductTableViewState extends State<ProductTableView> {
             (row) => TableRow(
               children: [
                 _buildBodyCell(
-                  Text(row.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    row.name,
+                    style: const TextStyle(
+                      color: _rowText,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      height: 1.0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 _buildBodyCell(
                   Text(
                     row.value,
+                    style: const TextStyle(
+                      fontFamily: _digitalFamily,
+                      color: _valueText,
+                      fontSize: 38,
+                      height: 0.9,
+                      shadows: [
+                        Shadow(color: Color(0x66000000), blurRadius: 14),
+                        Shadow(color: Color(0x33000000), blurRadius: 28),
+                      ],
+                    ),
                     textAlign: TextAlign.right,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -465,7 +500,14 @@ class _TableHeaderCell extends StatelessWidget {
           alignment: alignment,
           child: Text(
             label,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+              color: _ProductTableViewState._headerText,
+              letterSpacing: 0.6,
+              height: 1.0,
+              shadows: [Shadow(color: Color(0x66000000), blurRadius: 10)],
+            ),
           ),
         ),
       ),
