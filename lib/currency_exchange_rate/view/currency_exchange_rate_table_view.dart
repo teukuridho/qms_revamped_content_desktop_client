@@ -38,7 +38,6 @@ class CurrencyExchangeRateTableView extends StatefulWidget {
 
 class _CurrencyExchangeRateTableViewState
     extends State<CurrencyExchangeRateTableView> {
-  static const double _minTableWidth = 900;
   static const double _headerRowHeight = 46;
   static const double _bodyRowHeight = 54;
   static const double _bodyDividerWidth = 1;
@@ -59,7 +58,6 @@ class _CurrencyExchangeRateTableViewState
   StreamSubscription<CurrencyExchangeRateDownloadStartedEvent>? _dlStartSub;
   StreamSubscription<CurrencyExchangeRateDownloadSucceededEvent>? _dlOkSub;
   StreamSubscription<CurrencyExchangeRateDownloadFailedEvent>? _dlFailSub;
-  final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
   late final AutoScrollCoordinator _verticalAutoScrollCoordinator;
   bool _reinitializeInProgress = false;
@@ -164,7 +162,6 @@ class _CurrencyExchangeRateTableViewState
   @override
   void dispose() {
     _verticalAutoScrollCoordinator.detach();
-    _horizontalScrollController.dispose();
     _verticalScrollController.dispose();
     // ignore: discarded_futures
     _dlStartSub?.cancel();
@@ -204,7 +201,7 @@ class _CurrencyExchangeRateTableViewState
   Widget _buildTable(List<CurrencyExchangeRate> rows) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final tableWidth = math.max(constraints.maxWidth, _minTableWidth);
+        final tableWidth = constraints.maxWidth;
         final tableHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : (_headerRowHeight + (rows.length * _bodyRowHeight));
@@ -248,23 +245,15 @@ class _CurrencyExchangeRateTableViewState
             _verticalAutoScrollCoordinator.onScrollMetricsChanged();
             return false;
           },
-          child: Scrollbar(
-            controller: _horizontalScrollController,
-            thumbVisibility: true,
-            child: SingleChildScrollView(
-              controller: _horizontalScrollController,
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: tableWidth,
-                height: tableHeight,
-                child: Column(
-                  children: [
-                    _buildHeaderRow(context),
-                    const Divider(height: 1),
-                    Expanded(child: verticalScrollable),
-                  ],
-                ),
-              ),
+          child: SizedBox(
+            width: tableWidth,
+            height: tableHeight,
+            child: Column(
+              children: [
+                _buildHeaderRow(context),
+                const Divider(height: 1),
+                Expanded(child: verticalScrollable),
+              ],
             ),
           ),
         );
@@ -281,8 +270,8 @@ class _CurrencyExchangeRateTableViewState
           TableRow(
             children: [
               _TableHeaderCell(label: 'FLAG'),
-              _TableHeaderCell(label: 'COUNTRY NAME'),
-              _TableHeaderCell(label: 'CURRENCY CODE'),
+              _TableHeaderCell(label: 'NAME'),
+              _TableHeaderCell(label: 'CURRENCY'),
               _TableHeaderCell(label: 'BUY', alignment: Alignment.centerRight),
               _TableHeaderCell(label: 'SELL', alignment: Alignment.centerRight),
             ],
@@ -303,16 +292,35 @@ class _CurrencyExchangeRateTableViewState
             (row) => TableRow(
               children: [
                 _buildBodyCell(_buildFlag(row.flagImagePath)),
-                _buildBodyCell(Text(row.countryName)),
-                _buildBodyCell(Text(row.currencyCode)),
                 _buildBodyCell(
-                  Text(_formatFixedAmount(row.buy), textAlign: TextAlign.right),
+                  Text(
+                    row.countryName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _buildBodyCell(
+                  Text(
+                    row.currencyCode,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                _buildBodyCell(
+                  Text(
+                    _formatFixedAmount(row.buy),
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   alignment: Alignment.centerRight,
                 ),
                 _buildBodyCell(
                   Text(
                     _formatFixedAmount(row.sell),
                     textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   alignment: Alignment.centerRight,
                 ),
