@@ -56,9 +56,6 @@ class _ProductTableViewState extends State<ProductTableView> {
   static const double _autoScrollStep = 1.2;
   static const Duration _autoScrollReferenceTick = Duration(milliseconds: 32);
 
-  static const Map<int, TableColumnWidth> _tableColumnWidths =
-      <int, TableColumnWidth>{0: FlexColumnWidth(1), 1: FlexColumnWidth(1)};
-
   StreamSubscription<ProductDownloadStartedEvent>? _dlStartSub;
   StreamSubscription<ProductDownloadSucceededEvent>? _dlOkSub;
   StreamSubscription<ProductDownloadFailedEvent>? _dlFailSub;
@@ -211,6 +208,10 @@ class _ProductTableViewState extends State<ProductTableView> {
         final tableHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : (_headerRowHeight + (rows.length * _bodyRowHeight));
+        final columnWidths = _computeColumnWidths(
+          tableWidth: tableWidth,
+          rows: rows,
+        );
         final bodyViewportHeight = math.max(
           0,
           tableHeight - _headerRowHeight - _bodyDividerWidth,
@@ -232,7 +233,7 @@ class _ProductTableViewState extends State<ProductTableView> {
         _verticalAutoScrollCoordinator.scheduleSync();
         final verticalBodyScrollView = SingleChildScrollView(
           controller: _verticalScrollController,
-          child: _buildBodyTable(visibleRows),
+          child: _buildBodyTable(visibleRows, columnWidths),
         );
         final verticalBodyWithoutAutoScrollbar = ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
@@ -258,7 +259,7 @@ class _ProductTableViewState extends State<ProductTableView> {
                 height: tableHeight,
                 child: Column(
                   children: [
-                    _buildHeaderRow(context),
+                    _buildHeaderRow(context, columnWidths),
                     const Divider(height: 1, thickness: 1, color: _panelBorder),
                     Expanded(child: verticalScrollable),
                   ],
@@ -271,9 +272,82 @@ class _ProductTableViewState extends State<ProductTableView> {
     );
   }
 
-  Widget _buildHeaderRow(BuildContext context) {
+  Map<int, TableColumnWidth> _computeColumnWidths({
+    required double tableWidth,
+    required List<Product> rows,
+  }) {
+    if (tableWidth <= 0) {
+      return const <int, TableColumnWidth>{
+        0: FlexColumnWidth(1),
+        1: FlexColumnWidth(1),
+      };
+    }
+
+    // Current cell padding: 12px left + 12px right.
+    const cellHPadding = 24.0;
+    final minColWidth = math.min(80.0, tableWidth);
+
+    final headerStyle = const TextStyle(
+      fontWeight: FontWeight.w800,
+      fontSize: 15,
+      letterSpacing: 0.6,
+      height: 1.0,
+    );
+    final valueStyle = const TextStyle(
+      fontFamily: _digitalFamily,
+      color: _valueText,
+      fontSize: 20,
+      height: 0.9,
+    );
+
+    double maxValueTextWidth = _measureTextWidth(
+      widget.valueHeader,
+      headerStyle,
+    );
+    for (final r in rows) {
+      maxValueTextWidth = math.max(
+        maxValueTextWidth,
+        _measureTextWidth(r.value, valueStyle),
+      );
+    }
+
+    // Let the value column take what it needs (within limits), and let the
+    // name column expand to fill the rest.
+    final minValueWidth =
+        (_measureTextWidth(widget.valueHeader, headerStyle) + cellHPadding)
+            .clamp(minColWidth, tableWidth);
+
+    // Keep at least a sliver for the name column when possible.
+    final nameFloor = tableWidth * 0.15;
+    final maxValueWidthByName = (tableWidth - nameFloor).clamp(0.0, tableWidth);
+    final maxValueWidth = math.max(minValueWidth, maxValueWidthByName);
+
+    final desiredValueWidth = (maxValueTextWidth + cellHPadding).clamp(
+      minValueWidth,
+      maxValueWidth,
+    );
+
+    return <int, TableColumnWidth>{
+      0: const FlexColumnWidth(1),
+      1: FixedColumnWidth(desiredValueWidth),
+    };
+  }
+
+  double _measureTextWidth(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    return painter.width;
+  }
+
+  Widget _buildHeaderRow(
+    BuildContext context,
+    Map<int, TableColumnWidth> columnWidths,
+  ) {
     return Table(
-      columnWidths: _tableColumnWidths,
+      columnWidths: columnWidths,
       children: [
         TableRow(
           children: [
@@ -288,11 +362,14 @@ class _ProductTableViewState extends State<ProductTableView> {
     );
   }
 
-  Widget _buildBodyTable(List<Product> rows) {
+  Widget _buildBodyTable(
+    List<Product> rows,
+    Map<int, TableColumnWidth> columnWidths,
+  ) {
     final divider = BorderSide(color: _panelBorder, width: 1);
 
     return Table(
-      columnWidths: _tableColumnWidths,
+      columnWidths: columnWidths,
       border: TableBorder(horizontalInside: divider),
       children: rows
           .map(
