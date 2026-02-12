@@ -41,6 +41,11 @@ class _CurrencyExchangeRateTableViewState
   static const double _minTableWidth = 900;
   static const double _headerRowHeight = 46;
   static const double _bodyRowHeight = 54;
+  static const double _bodyDividerWidth = 1;
+  static const int _infiniteLoopCopies = 5;
+  static const int _infiniteWrapBufferRows = 3;
+  static const double _autoScrollStep = 3;
+  static const Duration _autoScrollReferenceTick = Duration(milliseconds: 32);
 
   static const Map<int, TableColumnWidth> _tableColumnWidths =
       <int, TableColumnWidth>{
@@ -58,6 +63,9 @@ class _CurrencyExchangeRateTableViewState
   final ScrollController _verticalScrollController = ScrollController();
   late final AutoScrollCoordinator _verticalAutoScrollCoordinator;
   bool _reinitializeInProgress = false;
+  bool _shouldAutoScroll = false;
+  bool _useInfiniteLoop = false;
+  double _infiniteCycleExtent = 0;
   ScaffoldMessengerState? _messenger;
 
   @override
@@ -65,7 +73,29 @@ class _CurrencyExchangeRateTableViewState
     super.initState();
     _verticalAutoScrollCoordinator = LoopingVerticalAutoScrollCoordinator(
       controller: _verticalScrollController,
-      step: 0.3,
+      tickDuration: _autoScrollReferenceTick,
+      step: _autoScrollStep,
+      resetToStartWhenAtMaxExtent: false,
+      shouldRun: (_) => _shouldAutoScroll,
+      nextOffset: (position, step) {
+        final raw = position.pixels + step;
+        if (!_useInfiniteLoop || _infiniteCycleExtent <= 0) {
+          return raw;
+        }
+
+        final wrapBufferExtent =
+            _infiniteWrapBufferRows * (_bodyRowHeight + _bodyDividerWidth);
+        final desiredThreshold = (_infiniteCycleExtent * 3) - wrapBufferExtent;
+        final maxAllowedThreshold = position.maxScrollExtent - wrapBufferExtent;
+        final wrapThreshold = math.max(
+          _infiniteCycleExtent,
+          math.min(desiredThreshold, maxAllowedThreshold),
+        );
+        if (raw >= wrapThreshold) {
+          return raw - _infiniteCycleExtent;
+        }
+        return raw;
+      },
     )..attach();
 
     _dlStartSub = widget.eventManager
@@ -178,6 +208,36 @@ class _CurrencyExchangeRateTableViewState
         final tableHeight = constraints.hasBoundedHeight
             ? constraints.maxHeight
             : (_headerRowHeight + (rows.length * _bodyRowHeight));
+        final bodyViewportHeight = math.max(
+          0,
+          tableHeight - _headerRowHeight - _bodyDividerWidth,
+        );
+        final originalBodyExtent = _estimateBodyExtent(rows.length);
+        final shouldAutoScroll = originalBodyExtent > bodyViewportHeight;
+        final useInfiniteLoop =
+            shouldAutoScroll && rows.isNotEmpty && _infiniteLoopCopies > 1;
+        final infiniteCycleExtent = useInfiniteLoop
+            ? _estimateCycleExtent(rows.length)
+            : 0.0;
+        final visibleRows = useInfiniteLoop
+            ? _buildInfiniteLoopRows(rows)
+            : rows;
+
+        _shouldAutoScroll = shouldAutoScroll;
+        _useInfiniteLoop = useInfiniteLoop;
+        _infiniteCycleExtent = infiniteCycleExtent;
+        _verticalAutoScrollCoordinator.scheduleSync();
+        final verticalBodyScrollView = SingleChildScrollView(
+          controller: _verticalScrollController,
+          child: _buildBodyTable(visibleRows),
+        );
+        final verticalScrollable = _useInfiniteLoop
+            ? verticalBodyScrollView
+            : Scrollbar(
+                controller: _verticalScrollController,
+                thumbVisibility: true,
+                child: verticalBodyScrollView,
+              );
 
         return NotificationListener<ScrollMetricsNotification>(
           onNotification: (_) {
@@ -197,16 +257,7 @@ class _CurrencyExchangeRateTableViewState
                   children: [
                     _buildHeaderRow(context),
                     const Divider(height: 1),
-                    Expanded(
-                      child: Scrollbar(
-                        controller: _verticalScrollController,
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                          controller: _verticalScrollController,
-                          child: _buildBodyTable(rows),
-                        ),
-                      ),
-                    ),
+                    Expanded(child: verticalScrollable),
                   ],
                 ),
               ),
@@ -279,6 +330,28 @@ class _CurrencyExchangeRateTableViewState
         child: Align(alignment: alignment, child: child),
       ),
     );
+  }
+
+  List<CurrencyExchangeRate> _buildInfiniteLoopRows(
+    List<CurrencyExchangeRate> rows,
+  ) {
+    final loopRowCount = rows.length * _infiniteLoopCopies;
+    return List<CurrencyExchangeRate>.generate(
+      loopRowCount,
+      (index) => rows[index % rows.length],
+      growable: false,
+    );
+  }
+
+  double _estimateBodyExtent(int rowCount) {
+    if (rowCount <= 0) return 0;
+    return (rowCount * _bodyRowHeight) + ((rowCount - 1) * _bodyDividerWidth);
+  }
+
+  double _estimateCycleExtent(int rowCount) {
+    if (rowCount <= 0) return 0;
+    // A full cycle includes one trailing divider to bridge into the next copy.
+    return rowCount * (_bodyRowHeight + _bodyDividerWidth);
   }
 
   Widget _buildFlag(String? imagePath) {

@@ -22,6 +22,7 @@ Reusable vertical auto-scroll utility for Flutter scrollable views.
   - auto-scrolls downward by `step` on every `tickDuration`
   - loops back to offset `0` after reaching bottom
   - reacts to window/layout metrics changes through `WidgetsBindingObserver`
+  - can disable hard reset with `resetToStartWhenAtMaxExtent: false`
 
 ## Extension Points
 
@@ -29,6 +30,14 @@ Reusable vertical auto-scroll utility for Flutter scrollable views.
 - Use `LoopingVerticalAutoScrollCoordinator` with callback overrides:
   - `shouldRun`: custom condition for start/stop
   - `nextOffset`: custom offset progression per tick
+
+## Infinite Loop Strategy
+
+- For seamless "infinite" vertical scrolling on finite data:
+  - render repeated row copies (commonly `3x`)
+  - provide `nextOffset` that wraps by one cycle extent before reaching the end
+  - wrap a few rows before bottom (for example `2-3` rows) to avoid visible hitch
+  - this avoids visible reset to offset `0`
 
 ## Integration Pattern
 

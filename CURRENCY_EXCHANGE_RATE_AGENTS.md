@@ -151,7 +151,8 @@ Minimum behavior:
 - table header (`FLAG | COUNTRY NAME | CURRENCY_CODE | BUY | SELL`) is sticky
   while vertical scrolling
 - table body auto-scrolls when rows overflow viewport height
-- after auto-scroll reaches bottom, scroll offset resets to `0` and loops again
+- table body uses seamless infinite-loop scrolling (no visible hard reset to `0`)
+- loop wraps a few rows before end (`~3` rows) to reduce visible lag/hitch
 - auto-scroll behavior re-evaluates on layout/window size changes
 
 Implementation reference:
