@@ -219,6 +219,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
       builder: (context) {
         return ServerPropertiesConfigurationDialog(
           serviceName: widget.serviceName,
+          tag: widget.tag,
           title: 'Media Configuration',
           description:
               'Configure server connection and authentication for this media component.',

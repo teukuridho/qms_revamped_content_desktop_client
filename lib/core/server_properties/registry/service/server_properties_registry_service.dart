@@ -22,14 +22,17 @@ class ServerPropertiesRegistryService {
     _eventManager = eventManager;
   }
 
-  Future<ServerProperty?> getOneByServiceName({
+  Future<ServerProperty?> getOneByServiceNameAndTag({
     required String serviceName,
+    required String tag,
   }) async {
     AppDatabase appDatabase = _appDatabaseManager.appDatabase;
-    _log.d('getOneByServiceName(serviceName=$serviceName)');
+    _log.d('getOneByServiceNameAndTag(serviceName=$serviceName tag=$tag)');
 
     return (await (appDatabase.select(appDatabase.serverProperties)
-              ..where((e) => e.serviceName.equals(serviceName))
+              ..where(
+                (e) => e.serviceName.equals(serviceName) & e.tag.equals(tag),
+              )
               ..limit(1))
             .get())
         .firstOrNull;
@@ -37,13 +40,14 @@ class ServerPropertiesRegistryService {
 
   Future<ServerProperty> create(CreateServerPropertiesRequest request) async {
     AppDatabase appDatabase = _appDatabaseManager.appDatabase;
-    _log.i('create(serviceName=${request.serviceName})');
+    _log.i('create(serviceName=${request.serviceName} tag=${request.tag})');
 
     ServerProperty result = await appDatabase
         .into(appDatabase.serverProperties)
         .insertReturning(
           ServerPropertiesCompanion.insert(
             serviceName: request.serviceName,
+            tag: Value(request.tag),
             serverAddress: request.serverAddress,
             keycloakBaseUrl: Value(request.keycloakBaseUrl),
             keycloakRealm: Value(request.keycloakRealm),
@@ -56,12 +60,12 @@ class ServerPropertiesRegistryService {
     return result;
   }
 
-  Future<ServerProperty?> updateByServiceName(
+  Future<ServerProperty?> updateByServiceNameAndTag(
     UpdateServiceByNameRequest request,
   ) async {
     AppDatabase appDatabase = _appDatabaseManager.appDatabase;
     _log.i(
-      'updateByServiceName(serviceName=${request.serviceName} '
+      'updateByServiceNameAndTag(serviceName=${request.serviceName} tag=${request.tag} '
       'serverAddress=${request.serverAddress == null ? "<unchanged>" : "<updated>"} '
       'keycloak=<updated=${request.keycloakBaseUrl != null || request.keycloakRealm != null || request.keycloakClientId != null}> '
       'tokens=<access=${request.oidcAccessToken == null ? "unchanged" : (request.oidcAccessToken!.isEmpty ? "cleared" : "set")} '
@@ -70,8 +74,11 @@ class ServerPropertiesRegistryService {
     );
 
     ServerProperty? result =
-        (await (appDatabase.update(appDatabase.serverProperties)
-                  ..where((e) => e.serviceName.equals(request.serviceName)))
+        (await (appDatabase.update(appDatabase.serverProperties)..where(
+                  (e) =>
+                      e.serviceName.equals(request.serviceName) &
+                      e.tag.equals(request.tag),
+                ))
                 .writeReturning(
                   ServerPropertiesCompanion(
                     serverAddress: Value.absentIfNull(request.serverAddress),

@@ -47,6 +47,7 @@ class PositionUpdateSubscriber {
            authService ??
            OidcAuthService(
              serviceName: serviceName,
+             tag: tag,
              serverPropertiesRegistryService: serverPropertiesRegistryService,
            ),
        _serverPropertiesRegistryService = serverPropertiesRegistryService,
@@ -100,7 +101,7 @@ class PositionUpdateSubscriber {
       '(incoming serviceName=${event.serviceName}, expected serviceName=$serviceName tag=$tag)',
     );
     if (_disposed) return;
-    if (event.serviceName != serviceName) return;
+    if (event.serviceName != serviceName || event.tag != tag) return;
 
     PositionUpdateSubscriberLogger.info(
       'AuthLoggedInEvent matched. Starting SSE subscribe loop (serviceName=$serviceName tag=$tag)',
@@ -145,8 +146,9 @@ class PositionUpdateSubscriber {
   }
 
   Future<void> _subscribeOnce(int gen) async {
-    final sp = await _serverPropertiesRegistryService.getOneByServiceName(
+    final sp = await _serverPropertiesRegistryService.getOneByServiceNameAndTag(
       serviceName: serviceName,
+      tag: tag,
     );
     if (sp == null) {
       throw StateError(

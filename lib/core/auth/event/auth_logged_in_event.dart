@@ -1,5 +1,6 @@
 class AuthLoggedInEvent {
   final String serviceName;
+  final String tag;
 
   /// `browser_pkce` or `device_qr`
   final String method;
@@ -17,6 +18,7 @@ class AuthLoggedInEvent {
 
   const AuthLoggedInEvent({
     required this.serviceName,
+    required this.tag,
     required this.method,
     required this.loggedInAtEpochMs,
     required this.keycloakBaseUrl,
@@ -28,4 +30,3 @@ class AuthLoggedInEvent {
     required this.hasRefreshToken,
   });
 }
-

@@ -8,6 +8,7 @@ import 'package:qms_revamped_content_desktop_client/core/server_properties/regis
 
 class ServerPropertiesConfigurationDialog extends StatefulWidget {
   final String serviceName;
+  final String tag;
   final String title;
   final String description;
   final ServerPropertiesRegistryService registryService;
@@ -17,6 +18,7 @@ class ServerPropertiesConfigurationDialog extends StatefulWidget {
   const ServerPropertiesConfigurationDialog({
     super.key,
     required this.serviceName,
+    required this.tag,
     required this.title,
     required this.description,
     required this.registryService,
@@ -35,11 +37,13 @@ class _ServerPropertiesConfigurationDialogState
       ServerPropertiesFormViewModel(
         registryService: widget.registryService,
         serviceName: widget.serviceName,
+        tag: widget.tag,
       );
 
   late final AuthViewModel _authViewModel = AuthViewModel(
     authService: OidcAuthService(
       serviceName: widget.serviceName,
+      tag: widget.tag,
       serverPropertiesRegistryService: widget.registryService,
       eventManager: widget.eventManager,
     ),

@@ -480,6 +480,16 @@ class $ServerPropertiesTable extends ServerProperties
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _tagMeta = const VerificationMeta('tag');
+  @override
+  late final GeneratedColumn<String> tag = GeneratedColumn<String>(
+    'tag',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('main'),
+  );
   static const VerificationMeta _serverAddressMeta = const VerificationMeta(
     'serverAddress',
   );
@@ -602,6 +612,7 @@ class $ServerPropertiesTable extends ServerProperties
   List<GeneratedColumn> get $columns => [
     id,
     serviceName,
+    tag,
     serverAddress,
     keycloakBaseUrl,
     keycloakRealm,
@@ -638,6 +649,12 @@ class $ServerPropertiesTable extends ServerProperties
       );
     } else if (isInserting) {
       context.missing(_serviceNameMeta);
+    }
+    if (data.containsKey('tag')) {
+      context.handle(
+        _tagMeta,
+        tag.isAcceptableOrUnknown(data['tag']!, _tagMeta),
+      );
     }
     if (data.containsKey('server_address')) {
       context.handle(
@@ -734,6 +751,10 @@ class $ServerPropertiesTable extends ServerProperties
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {serviceName, tag},
+  ];
+  @override
   ServerProperty map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return ServerProperty(
@@ -744,6 +765,10 @@ class $ServerPropertiesTable extends ServerProperties
       serviceName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}service_name'],
+      )!,
+      tag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag'],
       )!,
       serverAddress: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -797,6 +822,7 @@ class $ServerPropertiesTable extends ServerProperties
 class ServerProperty extends DataClass implements Insertable<ServerProperty> {
   final int id;
   final String serviceName;
+  final String tag;
   final String serverAddress;
   final String keycloakBaseUrl;
   final String keycloakRealm;
@@ -810,6 +836,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
   const ServerProperty({
     required this.id,
     required this.serviceName,
+    required this.tag,
     required this.serverAddress,
     required this.keycloakBaseUrl,
     required this.keycloakRealm,
@@ -826,6 +853,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['service_name'] = Variable<String>(serviceName);
+    map['tag'] = Variable<String>(tag);
     map['server_address'] = Variable<String>(serverAddress);
     map['keycloak_base_url'] = Variable<String>(keycloakBaseUrl);
     map['keycloak_realm'] = Variable<String>(keycloakRealm);
@@ -843,6 +871,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
     return ServerPropertiesCompanion(
       id: Value(id),
       serviceName: Value(serviceName),
+      tag: Value(tag),
       serverAddress: Value(serverAddress),
       keycloakBaseUrl: Value(keycloakBaseUrl),
       keycloakRealm: Value(keycloakRealm),
@@ -864,6 +893,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
     return ServerProperty(
       id: serializer.fromJson<int>(json['id']),
       serviceName: serializer.fromJson<String>(json['serviceName']),
+      tag: serializer.fromJson<String>(json['tag']),
       serverAddress: serializer.fromJson<String>(json['serverAddress']),
       keycloakBaseUrl: serializer.fromJson<String>(json['keycloakBaseUrl']),
       keycloakRealm: serializer.fromJson<String>(json['keycloakRealm']),
@@ -884,6 +914,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'serviceName': serializer.toJson<String>(serviceName),
+      'tag': serializer.toJson<String>(tag),
       'serverAddress': serializer.toJson<String>(serverAddress),
       'keycloakBaseUrl': serializer.toJson<String>(keycloakBaseUrl),
       'keycloakRealm': serializer.toJson<String>(keycloakRealm),
@@ -900,6 +931,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
   ServerProperty copyWith({
     int? id,
     String? serviceName,
+    String? tag,
     String? serverAddress,
     String? keycloakBaseUrl,
     String? keycloakRealm,
@@ -913,6 +945,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
   }) => ServerProperty(
     id: id ?? this.id,
     serviceName: serviceName ?? this.serviceName,
+    tag: tag ?? this.tag,
     serverAddress: serverAddress ?? this.serverAddress,
     keycloakBaseUrl: keycloakBaseUrl ?? this.keycloakBaseUrl,
     keycloakRealm: keycloakRealm ?? this.keycloakRealm,
@@ -930,6 +963,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
       serviceName: data.serviceName.present
           ? data.serviceName.value
           : this.serviceName,
+      tag: data.tag.present ? data.tag.value : this.tag,
       serverAddress: data.serverAddress.present
           ? data.serverAddress.value
           : this.serverAddress,
@@ -966,6 +1000,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
     return (StringBuffer('ServerProperty(')
           ..write('id: $id, ')
           ..write('serviceName: $serviceName, ')
+          ..write('tag: $tag, ')
           ..write('serverAddress: $serverAddress, ')
           ..write('keycloakBaseUrl: $keycloakBaseUrl, ')
           ..write('keycloakRealm: $keycloakRealm, ')
@@ -984,6 +1019,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
   int get hashCode => Object.hash(
     id,
     serviceName,
+    tag,
     serverAddress,
     keycloakBaseUrl,
     keycloakRealm,
@@ -1001,6 +1037,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
       (other is ServerProperty &&
           other.id == this.id &&
           other.serviceName == this.serviceName &&
+          other.tag == this.tag &&
           other.serverAddress == this.serverAddress &&
           other.keycloakBaseUrl == this.keycloakBaseUrl &&
           other.keycloakRealm == this.keycloakRealm &&
@@ -1016,6 +1053,7 @@ class ServerProperty extends DataClass implements Insertable<ServerProperty> {
 class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
   final Value<int> id;
   final Value<String> serviceName;
+  final Value<String> tag;
   final Value<String> serverAddress;
   final Value<String> keycloakBaseUrl;
   final Value<String> keycloakRealm;
@@ -1029,6 +1067,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
   const ServerPropertiesCompanion({
     this.id = const Value.absent(),
     this.serviceName = const Value.absent(),
+    this.tag = const Value.absent(),
     this.serverAddress = const Value.absent(),
     this.keycloakBaseUrl = const Value.absent(),
     this.keycloakRealm = const Value.absent(),
@@ -1043,6 +1082,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
   ServerPropertiesCompanion.insert({
     this.id = const Value.absent(),
     required String serviceName,
+    this.tag = const Value.absent(),
     required String serverAddress,
     this.keycloakBaseUrl = const Value.absent(),
     this.keycloakRealm = const Value.absent(),
@@ -1058,6 +1098,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
   static Insertable<ServerProperty> custom({
     Expression<int>? id,
     Expression<String>? serviceName,
+    Expression<String>? tag,
     Expression<String>? serverAddress,
     Expression<String>? keycloakBaseUrl,
     Expression<String>? keycloakRealm,
@@ -1072,6 +1113,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (serviceName != null) 'service_name': serviceName,
+      if (tag != null) 'tag': tag,
       if (serverAddress != null) 'server_address': serverAddress,
       if (keycloakBaseUrl != null) 'keycloak_base_url': keycloakBaseUrl,
       if (keycloakRealm != null) 'keycloak_realm': keycloakRealm,
@@ -1089,6 +1131,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
   ServerPropertiesCompanion copyWith({
     Value<int>? id,
     Value<String>? serviceName,
+    Value<String>? tag,
     Value<String>? serverAddress,
     Value<String>? keycloakBaseUrl,
     Value<String>? keycloakRealm,
@@ -1103,6 +1146,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
     return ServerPropertiesCompanion(
       id: id ?? this.id,
       serviceName: serviceName ?? this.serviceName,
+      tag: tag ?? this.tag,
       serverAddress: serverAddress ?? this.serverAddress,
       keycloakBaseUrl: keycloakBaseUrl ?? this.keycloakBaseUrl,
       keycloakRealm: keycloakRealm ?? this.keycloakRealm,
@@ -1124,6 +1168,9 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
     }
     if (serviceName.present) {
       map['service_name'] = Variable<String>(serviceName.value);
+    }
+    if (tag.present) {
+      map['tag'] = Variable<String>(tag.value);
     }
     if (serverAddress.present) {
       map['server_address'] = Variable<String>(serverAddress.value);
@@ -1165,6 +1212,7 @@ class ServerPropertiesCompanion extends UpdateCompanion<ServerProperty> {
     return (StringBuffer('ServerPropertiesCompanion(')
           ..write('id: $id, ')
           ..write('serviceName: $serviceName, ')
+          ..write('tag: $tag, ')
           ..write('serverAddress: $serverAddress, ')
           ..write('keycloakBaseUrl: $keycloakBaseUrl, ')
           ..write('keycloakRealm: $keycloakRealm, ')
@@ -2443,6 +2491,7 @@ typedef $$ServerPropertiesTableCreateCompanionBuilder =
     ServerPropertiesCompanion Function({
       Value<int> id,
       required String serviceName,
+      Value<String> tag,
       required String serverAddress,
       Value<String> keycloakBaseUrl,
       Value<String> keycloakRealm,
@@ -2458,6 +2507,7 @@ typedef $$ServerPropertiesTableUpdateCompanionBuilder =
     ServerPropertiesCompanion Function({
       Value<int> id,
       Value<String> serviceName,
+      Value<String> tag,
       Value<String> serverAddress,
       Value<String> keycloakBaseUrl,
       Value<String> keycloakRealm,
@@ -2486,6 +2536,11 @@ class $$ServerPropertiesTableFilterComposer
 
   ColumnFilters<String> get serviceName => $composableBuilder(
     column: $table.serviceName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tag => $composableBuilder(
+    column: $table.tag,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2559,6 +2614,11 @@ class $$ServerPropertiesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tag => $composableBuilder(
+    column: $table.tag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get serverAddress => $composableBuilder(
     column: $table.serverAddress,
     builder: (column) => ColumnOrderings(column),
@@ -2626,6 +2686,9 @@ class $$ServerPropertiesTableAnnotationComposer
     column: $table.serviceName,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get tag =>
+      $composableBuilder(column: $table.tag, builder: (column) => column);
 
   GeneratedColumn<String> get serverAddress => $composableBuilder(
     column: $table.serverAddress,
@@ -2715,6 +2778,7 @@ class $$ServerPropertiesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> serviceName = const Value.absent(),
+                Value<String> tag = const Value.absent(),
                 Value<String> serverAddress = const Value.absent(),
                 Value<String> keycloakBaseUrl = const Value.absent(),
                 Value<String> keycloakRealm = const Value.absent(),
@@ -2728,6 +2792,7 @@ class $$ServerPropertiesTableTableManager
               }) => ServerPropertiesCompanion(
                 id: id,
                 serviceName: serviceName,
+                tag: tag,
                 serverAddress: serverAddress,
                 keycloakBaseUrl: keycloakBaseUrl,
                 keycloakRealm: keycloakRealm,
@@ -2743,6 +2808,7 @@ class $$ServerPropertiesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String serviceName,
+                Value<String> tag = const Value.absent(),
                 required String serverAddress,
                 Value<String> keycloakBaseUrl = const Value.absent(),
                 Value<String> keycloakRealm = const Value.absent(),
@@ -2756,6 +2822,7 @@ class $$ServerPropertiesTableTableManager
               }) => ServerPropertiesCompanion.insert(
                 id: id,
                 serviceName: serviceName,
+                tag: tag,
                 serverAddress: serverAddress,
                 keycloakBaseUrl: keycloakBaseUrl,
                 keycloakRealm: keycloakRealm,

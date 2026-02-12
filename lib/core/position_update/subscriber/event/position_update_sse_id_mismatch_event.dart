@@ -13,4 +13,3 @@ class PositionUpdateSseIdMismatchEvent {
     required this.mismatch,
   });
 }
-

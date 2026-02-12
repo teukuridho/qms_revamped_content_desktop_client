@@ -44,6 +44,7 @@ class CurrencyExchangeRateDownloader
            authService ??
            OidcAuthService(
              serviceName: serviceName,
+             tag: tag,
              serverPropertiesRegistryService: serverPropertiesRegistryService,
            ),
        _registryService = registryService,
@@ -64,9 +65,8 @@ class CurrencyExchangeRateDownloader
     );
 
     try {
-      final sp = await _serverPropertiesRegistryService.getOneByServiceName(
-        serviceName: serviceName,
-      );
+      final sp = await _serverPropertiesRegistryService
+          .getOneByServiceNameAndTag(serviceName: serviceName, tag: tag);
       if (sp == null) {
         throw StateError(
           'Missing server properties for serviceName=$serviceName',
@@ -142,8 +142,9 @@ class CurrencyExchangeRateDownloader
   Future<void> downloadOne(CurrencyExchangeRateDto dto) async {
     if (dto.tag != tag) return;
 
-    final sp = await _serverPropertiesRegistryService.getOneByServiceName(
+    final sp = await _serverPropertiesRegistryService.getOneByServiceNameAndTag(
       serviceName: serviceName,
+      tag: tag,
     );
     if (sp == null) {
       throw StateError(

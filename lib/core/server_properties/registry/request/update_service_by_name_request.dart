@@ -1,5 +1,6 @@
 class UpdateServiceByNameRequest {
   late final String serviceName;
+  late final String tag;
   String? serverAddress;
 
   // Keycloak / OIDC config
@@ -17,6 +18,7 @@ class UpdateServiceByNameRequest {
 
   UpdateServiceByNameRequest({
     required this.serviceName,
+    required this.tag,
     this.serverAddress,
     this.keycloakBaseUrl,
     this.keycloakRealm,

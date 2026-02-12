@@ -1,5 +1,6 @@
 class CreateServerPropertiesRequest {
   late final String serviceName;
+  late final String tag;
   late final String serverAddress;
 
   // Optional: Keycloak / OIDC config
@@ -9,6 +10,7 @@ class CreateServerPropertiesRequest {
 
   CreateServerPropertiesRequest({
     required this.serviceName,
+    required this.tag,
     required this.serverAddress,
     this.keycloakBaseUrl = '',
     this.keycloakRealm = '',

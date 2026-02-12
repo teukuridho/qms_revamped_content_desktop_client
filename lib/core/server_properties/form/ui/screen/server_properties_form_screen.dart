@@ -28,11 +28,13 @@ class _ServerPropertiesFormScreenState
       ServerPropertiesFormViewModel(
         registryService: widget.registryService,
         serviceName: AppConfig.serviceName,
+        tag: AppConfig.positionUpdateTag,
       );
 
   late final AuthViewModel authViewModel = AuthViewModel(
     authService: OidcAuthService(
       serviceName: AppConfig.serviceName,
+      tag: AppConfig.positionUpdateTag,
       serverPropertiesRegistryService: widget.registryService,
       eventManager: widget.eventManager,
     ),

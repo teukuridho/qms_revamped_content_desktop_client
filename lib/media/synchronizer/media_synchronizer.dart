@@ -61,6 +61,7 @@ class MediaSynchronizer {
            authService ??
            OidcAuthService(
              serviceName: serviceName,
+             tag: tag,
              serverPropertiesRegistryService: serverPropertiesRegistryService,
            ),
        _downloader = downloader,
@@ -96,7 +97,7 @@ class MediaSynchronizer {
 
   void _onAuthLoggedInEvent(AuthLoggedInEvent event) {
     if (_disposed) return;
-    if (event.serviceName != serviceName) return;
+    if (event.serviceName != serviceName || event.tag != tag) return;
     MediaSynchronizerLogger.info(
       'AuthLoggedInEvent matched. Starting media SSE subscribe loop (serviceName=$serviceName tag=$tag)',
     );
@@ -142,8 +143,9 @@ class MediaSynchronizer {
   }
 
   Future<void> _subscribeOnce(int gen) async {
-    final sp = await _serverPropertiesRegistryService.getOneByServiceName(
+    final sp = await _serverPropertiesRegistryService.getOneByServiceNameAndTag(
       serviceName: serviceName,
+      tag: tag,
     );
     if (sp == null) {
       throw StateError(

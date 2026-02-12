@@ -81,6 +81,7 @@ class CurrencyExchangeRateFeature {
 
     final authService = OidcAuthService(
       serviceName: serviceName,
+      tag: tag,
       serverPropertiesRegistryService: serverPropertiesRegistryService,
     );
 

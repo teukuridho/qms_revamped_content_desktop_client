@@ -23,7 +23,7 @@ class SseParser {
     int start = 0;
 
     for (int i = 0; i < s.length; i++) {
-      if (s.codeUnitAt(i) != 0x0A /* \n */) continue;
+      if (s.codeUnitAt(i) != 0x0A /* \n */ ) continue;
 
       var line = s.substring(start, i);
       if (line.endsWith('\r')) {

@@ -42,6 +42,7 @@ class MediaDownloader implements MediaDownloaderBase {
            authService ??
            OidcAuthService(
              serviceName: serviceName,
+             tag: tag,
              serverPropertiesRegistryService: serverPropertiesRegistryService,
            ),
        _mediaRegistryService = mediaRegistryService,
@@ -58,9 +59,8 @@ class MediaDownloader implements MediaDownloaderBase {
     );
 
     try {
-      final sp = await _serverPropertiesRegistryService.getOneByServiceName(
-        serviceName: serviceName,
-      );
+      final sp = await _serverPropertiesRegistryService
+          .getOneByServiceNameAndTag(serviceName: serviceName, tag: tag);
       if (sp == null) {
         throw StateError(
           'Missing server properties for serviceName=$serviceName',
@@ -158,8 +158,9 @@ class MediaDownloader implements MediaDownloaderBase {
       return;
     }
 
-    final sp = await _serverPropertiesRegistryService.getOneByServiceName(
+    final sp = await _serverPropertiesRegistryService.getOneByServiceNameAndTag(
       serviceName: serviceName,
+      tag: tag,
     );
     if (sp == null) {
       throw StateError(

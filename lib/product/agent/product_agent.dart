@@ -49,7 +49,7 @@ class ProductAgent {
     _authSub ??= _eventManager.listen<AuthLoggedInEvent>().listen(
       (event) {
         if (_disposed) return;
-        if (event.serviceName != serviceName) return;
+        if (event.serviceName != serviceName || event.tag != tag) return;
         _log.i(
           'AuthLoggedInEvent matched; initializing products (serviceName=$serviceName tag=$tag)',
         );

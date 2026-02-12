@@ -35,6 +35,7 @@ class ProductDownloader implements ProductDownloaderBase {
            authService ??
            OidcAuthService(
              serviceName: serviceName,
+             tag: tag,
              serverPropertiesRegistryService: serverPropertiesRegistryService,
            ),
        _registryService = registryService,
@@ -48,9 +49,8 @@ class ProductDownloader implements ProductDownloaderBase {
     );
 
     try {
-      final sp = await _serverPropertiesRegistryService.getOneByServiceName(
-        serviceName: serviceName,
-      );
+      final sp = await _serverPropertiesRegistryService
+          .getOneByServiceNameAndTag(serviceName: serviceName, tag: tag);
       if (sp == null) {
         throw StateError(
           'Missing server properties for serviceName=$serviceName',

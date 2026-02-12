@@ -1,10 +1,6 @@
 import 'sse_frame.dart';
 
-enum SseIncrementalIdMismatchReason {
-  missingId,
-  nonNumericId,
-  unexpectedId,
-}
+enum SseIncrementalIdMismatchReason { missingId, nonNumericId, unexpectedId }
 
 class SseIncrementalIdMismatch {
   final int expectedId;
@@ -27,7 +23,8 @@ class SseIncrementalIdMismatch {
   }
 }
 
-typedef SseIncrementalMismatchCallback = void Function(SseIncrementalIdMismatch mismatch);
+typedef SseIncrementalMismatchCallback =
+    void Function(SseIncrementalIdMismatch mismatch);
 
 class SseIncrementalIdValidator {
   int? _lastId;

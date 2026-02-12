@@ -457,6 +457,7 @@ class _CurrencyExchangeRateTableViewState
       builder: (context) {
         return ServerPropertiesConfigurationDialog(
           serviceName: widget.serviceName,
+          tag: widget.tag,
           title: 'Currency Exchange Rate Configuration',
           description:
               'Configure server connection and authentication for this currency exchange rate component.',

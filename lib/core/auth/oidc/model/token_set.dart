@@ -17,4 +17,3 @@ class OidcTokenSet {
 
   int get expiresAtEpochMs => expiresAt.millisecondsSinceEpoch;
 }
-

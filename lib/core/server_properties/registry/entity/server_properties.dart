@@ -3,6 +3,9 @@ import 'package:drift/drift.dart';
 class ServerProperties extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get serviceName => text()();
+  // Default `main` allows safe migration on existing installs. Callers should
+  // still always provide tag explicitly.
+  TextColumn get tag => text().withDefault(const Constant('main'))();
   TextColumn get serverAddress => text()();
 
   // Keycloak / OIDC configuration (per serviceName)
@@ -21,4 +24,9 @@ class ServerProperties extends Table {
       integer().withDefault(const Constant(0))(); // access token expiry
   TextColumn get oidcScope => text().withDefault(const Constant(''))();
   TextColumn get oidcTokenType => text().withDefault(const Constant(''))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {serviceName, tag},
+  ];
 }

@@ -107,6 +107,7 @@ class MediaFeature {
 
     final authService = OidcAuthService(
       serviceName: serviceName,
+      tag: tag,
       serverPropertiesRegistryService: serverPropertiesRegistryService,
       // No EventManager required; this is used only for token checks/refresh.
     );

@@ -21,4 +21,3 @@ class SseJsonParser extends SseValueParser<Object?> {
     return jsonDecode(raw);
   }
 }
-

@@ -393,6 +393,7 @@ class _ProductTableViewState extends State<ProductTableView> {
       builder: (context) {
         return ServerPropertiesConfigurationDialog(
           serviceName: widget.serviceName,
+          tag: widget.tag,
           title: 'Product Configuration',
           description:
               'Configure server connection and authentication for this product component.',

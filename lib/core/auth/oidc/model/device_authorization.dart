@@ -15,7 +15,7 @@ class DeviceAuthorization {
     required this.interval,
   });
 
-  String get qrString =>
-      verificationUriComplete.isNotEmpty ? verificationUriComplete : verificationUri;
+  String get qrString => verificationUriComplete.isNotEmpty
+      ? verificationUriComplete
+      : verificationUri;
 }
-

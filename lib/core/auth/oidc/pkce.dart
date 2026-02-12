@@ -11,9 +11,14 @@ class PkcePair {
 
   static PkcePair generate({int verifierByteLength = 64}) {
     final rng = Random.secure();
-    final bytes = List<int>.generate(verifierByteLength, (_) => rng.nextInt(256));
+    final bytes = List<int>.generate(
+      verifierByteLength,
+      (_) => rng.nextInt(256),
+    );
     final verifier = _base64UrlNoPadding(bytes);
-    final challenge = _base64UrlNoPadding(sha256.convert(utf8.encode(verifier)).bytes);
+    final challenge = _base64UrlNoPadding(
+      sha256.convert(utf8.encode(verifier)).bytes,
+    );
     return PkcePair(codeVerifier: verifier, codeChallenge: challenge);
   }
 
@@ -21,4 +26,3 @@ class PkcePair {
     return base64UrlEncode(bytes).replaceAll('=', '');
   }
 }
-

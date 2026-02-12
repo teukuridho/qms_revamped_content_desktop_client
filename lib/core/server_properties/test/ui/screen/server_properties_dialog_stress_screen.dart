@@ -31,6 +31,7 @@ class ServerPropertiesDialogStressScreen extends StatefulWidget {
 class _ServerPropertiesDialogStressScreenState
     extends State<ServerPropertiesDialogStressScreen> {
   static const _serviceName = 'stress-server-properties';
+  static const _tag = 'main';
 
   final _registryService = _FakeServerPropertiesRegistryService();
   bool _running = false;
@@ -46,6 +47,7 @@ class _ServerPropertiesDialogStressScreenState
         return ServerPropertiesConfigurationDialog(
           dialogKey: ServerPropertiesDialogStressScreen.dialogKey,
           serviceName: _serviceName,
+          tag: _tag,
           title: 'Server Properties Stress Dialog',
           description:
               'Press Esc repeatedly or run auto cycles to stress route/dialog teardown.',
@@ -148,6 +150,7 @@ class _FakeServerPropertiesRegistryService
   ServerProperty _state = const ServerProperty(
     id: 1,
     serviceName: _ServerPropertiesDialogStressScreenState._serviceName,
+    tag: _ServerPropertiesDialogStressScreenState._tag,
     serverAddress: 'http://localhost:8081',
     keycloakBaseUrl: 'https://id.example.com',
     keycloakRealm: 'master',
@@ -161,11 +164,12 @@ class _FakeServerPropertiesRegistryService
   );
 
   @override
-  Future<ServerProperty?> getOneByServiceName({
+  Future<ServerProperty?> getOneByServiceNameAndTag({
     required String serviceName,
+    required String tag,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 80));
-    if (_state.serviceName != serviceName) return null;
+    if (_state.serviceName != serviceName || _state.tag != tag) return null;
     return _state;
   }
 
@@ -174,6 +178,7 @@ class _FakeServerPropertiesRegistryService
     await Future<void>.delayed(const Duration(milliseconds: 90));
     _state = _state.copyWith(
       serviceName: request.serviceName,
+      tag: request.tag,
       serverAddress: request.serverAddress,
       keycloakBaseUrl: request.keycloakBaseUrl,
       keycloakRealm: request.keycloakRealm,
@@ -183,11 +188,14 @@ class _FakeServerPropertiesRegistryService
   }
 
   @override
-  Future<ServerProperty?> updateByServiceName(
+  Future<ServerProperty?> updateByServiceNameAndTag(
     UpdateServiceByNameRequest request,
   ) async {
     await Future<void>.delayed(const Duration(milliseconds: 90));
-    if (_state.serviceName != request.serviceName) return null;
+    if (_state.serviceName != request.serviceName ||
+        _state.tag != request.tag) {
+      return null;
+    }
 
     _state = _state.copyWith(
       serverAddress: request.serverAddress ?? _state.serverAddress,

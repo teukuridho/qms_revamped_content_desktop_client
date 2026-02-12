@@ -10,6 +10,7 @@ class MediaServerPropertiesFormView extends ServerPropertiesFormView {
          viewModel: ServerPropertiesFormViewModel(
            registryService: registryService,
            serviceName: "media",
+           tag: "main",
          ),
        );
 }

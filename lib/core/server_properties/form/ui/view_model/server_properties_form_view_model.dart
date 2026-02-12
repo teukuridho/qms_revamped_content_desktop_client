@@ -11,6 +11,7 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   // Deps
   late final ServerPropertiesRegistryService _registryService;
   late final String _serviceName;
+  late final String _tag;
 
   // State
   final formKey = GlobalKey<FormState>();
@@ -25,9 +26,11 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   ServerPropertiesFormViewModel({
     required ServerPropertiesRegistryService registryService,
     required String serviceName,
+    required String tag,
   }) {
     _registryService = registryService;
     _serviceName = serviceName;
+    _tag = tag;
   }
 
   void init() {
@@ -37,9 +40,8 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
   Future<void> loadByServiceName() async {
     if (_disposed) return;
     final loadEpoch = ++_loadEpoch;
-    ServerProperty? serverProperty = await _registryService.getOneByServiceName(
-      serviceName: _serviceName,
-    );
+    ServerProperty? serverProperty = await _registryService
+        .getOneByServiceNameAndTag(serviceName: _serviceName, tag: _tag);
     if (_disposed || loadEpoch != _loadEpoch) return;
     if (serverProperty != null) {
       serverAddress.text = serverProperty.serverAddress;
@@ -60,12 +62,13 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
       _setSaveState(ProcessState(state: ProcessStateEnum.loading));
 
       ServerProperty? serverProperty = await _registryService
-          .getOneByServiceName(serviceName: _serviceName);
+          .getOneByServiceNameAndTag(serviceName: _serviceName, tag: _tag);
       if (_disposed) return;
       if (serverProperty == null) {
         await _registryService.create(
           CreateServerPropertiesRequest(
             serviceName: _serviceName,
+            tag: _tag,
             serverAddress: serverAddressValue,
             keycloakBaseUrl: keycloakBaseUrlValue,
             keycloakRealm: keycloakRealmValue,
@@ -73,9 +76,10 @@ class ServerPropertiesFormViewModel extends ChangeNotifier {
           ),
         );
       } else {
-        await _registryService.updateByServiceName(
+        await _registryService.updateByServiceNameAndTag(
           UpdateServiceByNameRequest(
             serviceName: _serviceName,
+            tag: _tag,
             serverAddress: serverAddressValue,
             keycloakBaseUrl: keycloakBaseUrlValue,
             keycloakRealm: keycloakRealmValue,

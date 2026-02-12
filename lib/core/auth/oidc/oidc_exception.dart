@@ -19,4 +19,3 @@ class OidcProtocolException implements Exception {
   @override
   String toString() => 'OidcProtocolException($message)';
 }
-

@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:qms_revamped_content_desktop_client/core/app_directory/app_directory_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/entity/server_properties.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/registry/entity/currency_exchange_rate.dart';
 import 'package:qms_revamped_content_desktop_client/media/registry/entity/media.dart';
@@ -19,12 +20,14 @@ part 'app_database.g.dart';
   tables: [Media, ServerProperties, CurrencyExchangeRates, Products],
 )
 class AppDatabase extends _$AppDatabase {
+  static final AppLog _log = AppLog('db_migrate');
+
   late final AppDirectoryService _appDirectoryService;
 
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -115,8 +118,112 @@ class AppDatabase extends _$AppDatabase {
       if (from < 10) {
         await m.createTable(products);
       }
+
+      if (from < 11) {
+        // `server_properties` is now keyed by (serviceName, tag).
+        // Do not use `TableMigration(serverProperties)` here: older databases
+        // may not have the `tag` column yet and the generated copy statement
+        // can reference it before it exists, causing `no such column: tag`.
+        await _ensureServerPropertiesTagExistsAndUnique();
+      }
+
+      if (from < 12) {
+        // Defensive migration for older/dirty databases:
+        // - Ensure tag/content_type/mime_type columns exist where expected.
+        // - Ensure server_properties has tag and a uniqueness constraint by
+        //   (service_name, tag). Older builds could have duplicate rows.
+        await _ensureMediaTagColumnsExist();
+        await _ensureServerPropertiesTagExistsAndUnique();
+      }
+
+      if (from < 13) {
+        // Re-run defensive checks in case a previous upgrade attempt partially
+        // applied schema changes but left the DB in an inconsistent state.
+        await _ensureMediaTagColumnsExist();
+        await _ensureServerPropertiesTagExistsAndUnique();
+      }
     },
   );
+
+  Future<void> _tryStatement(
+    String sql, {
+    bool ignoreDuplicateColumn = false,
+    bool ignoreDuplicateIndex = false,
+  }) async {
+    try {
+      await customStatement(sql);
+    } catch (e, st) {
+      final msg = e.toString().toLowerCase();
+      if (ignoreDuplicateColumn && msg.contains('duplicate column name')) {
+        return;
+      }
+      if (ignoreDuplicateIndex &&
+          (msg.contains('already exists') || msg.contains('duplicate'))) {
+        return;
+      }
+      _log.e('Migration statement failed: $sql', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  Future<void> _ensureMediaTagColumnsExist() async {
+    await _tryStatement(
+      "ALTER TABLE media ADD COLUMN content_type TEXT NOT NULL DEFAULT ''",
+      ignoreDuplicateColumn: true,
+    );
+    await _tryStatement(
+      "ALTER TABLE media ADD COLUMN mime_type TEXT NOT NULL DEFAULT ''",
+      ignoreDuplicateColumn: true,
+    );
+    await _tryStatement(
+      "ALTER TABLE media ADD COLUMN tag TEXT NOT NULL DEFAULT 'main'",
+      ignoreDuplicateColumn: true,
+    );
+
+    // Normalize older rows inserted before tag existed.
+    await _tryStatement("UPDATE media SET tag='main' WHERE tag=''");
+  }
+
+  Future<void> _ensureServerPropertiesTagExistsAndUnique() async {
+    await _tryStatement(
+      "ALTER TABLE server_properties ADD COLUMN tag TEXT NOT NULL DEFAULT 'main'",
+      ignoreDuplicateColumn: true,
+    );
+
+    await _tryStatement("UPDATE server_properties SET tag='main' WHERE tag=''");
+
+    // Keep only one row per (service_name, tag) so uniqueness can be enforced.
+    await _tryStatement('''
+DELETE FROM server_properties
+WHERE id NOT IN (
+  SELECT MAX(id)
+  FROM server_properties
+  GROUP BY service_name, tag
+)
+''');
+
+    await _tryStatement('''
+CREATE UNIQUE INDEX IF NOT EXISTS idx_server_properties_service_tag
+ON server_properties(service_name, tag)
+''', ignoreDuplicateIndex: true);
+  }
+
+  /// Best-effort schema repair for databases that are out-of-sync with Drift
+  /// migrations (for example, due to partial upgrades or older binaries).
+  ///
+  /// This should be safe to run multiple times.
+  Future<void> selfHealSchemaIfNeeded() async {
+    try {
+      // Touch the database so we get a clearer log ordering.
+      final uv = await customSelect('PRAGMA user_version').getSingle();
+      _log.i('selfHealSchemaIfNeeded(user_version=${uv.data['user_version']})');
+    } catch (_) {
+      // Ignore; some platforms/drivers may not support getSingle here.
+    }
+
+    await _ensureMediaTagColumnsExist();
+    await _ensureServerPropertiesTagExistsAndUnique();
+  }
 
   Future<void> _migrateCurrencyExchangeRateBuySellToReal() async {
     await customStatement('''

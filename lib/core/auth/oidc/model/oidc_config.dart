@@ -9,4 +9,3 @@ class OidcConfig {
     required this.clientId,
   });
 }
-

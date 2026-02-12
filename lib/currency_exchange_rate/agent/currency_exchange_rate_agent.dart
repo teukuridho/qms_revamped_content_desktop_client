@@ -54,7 +54,7 @@ class CurrencyExchangeRateAgent {
     _authSub ??= _eventManager.listen<AuthLoggedInEvent>().listen(
       (event) {
         if (_disposed) return;
-        if (event.serviceName != serviceName) return;
+        if (event.serviceName != serviceName || event.tag != tag) return;
         _log.i(
           'AuthLoggedInEvent matched; initializing currency exchange rates (serviceName=$serviceName tag=$tag)',
         );

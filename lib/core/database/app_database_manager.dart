@@ -24,6 +24,8 @@ class AppDatabaseManager {
   Future init() async {
     _log.i('Initializing database');
     _appDatabase = AppDatabase(_openConnection());
+    // Force-open + attempt best-effort schema repair before any feature queries.
+    await _appDatabase.selfHealSchemaIfNeeded();
   }
 
   LazyDatabase _openConnection() {

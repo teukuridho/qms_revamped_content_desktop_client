@@ -22,8 +22,9 @@ class FakeServerPropertiesRegistryService
   FakeServerPropertiesRegistryService(this.serverProperty);
 
   @override
-  Future<ServerProperty?> getOneByServiceName({
+  Future<ServerProperty?> getOneByServiceNameAndTag({
     required String serviceName,
+    required String tag,
   }) async {
     return serverProperty;
   }
@@ -34,7 +35,7 @@ class FakeServerPropertiesRegistryService
   }
 
   @override
-  Future<ServerProperty?> updateByServiceName(
+  Future<ServerProperty?> updateByServiceNameAndTag(
     UpdateServiceByNameRequest request,
   ) {
     throw UnimplementedError();
@@ -133,6 +134,7 @@ ServerProperty _serverProperty({
   return ServerProperty(
     id: 1,
     serviceName: serviceName,
+    tag: 'main',
     serverAddress: serverAddress,
     keycloakBaseUrl: '',
     keycloakRealm: '',
@@ -201,6 +203,7 @@ void main() {
       em.publishEvent(
         AuthLoggedInEvent(
           serviceName: 'svcB',
+          tag: 'main',
           method: 'browser_pkce',
           loggedInAtEpochMs: DateTime.now().millisecondsSinceEpoch,
           keycloakBaseUrl: '',
@@ -258,6 +261,7 @@ void main() {
       em.publishEvent(
         AuthLoggedInEvent(
           serviceName: serviceName,
+          tag: 'main',
           method: 'browser_pkce',
           loggedInAtEpochMs: DateTime.now().millisecondsSinceEpoch,
           keycloakBaseUrl: '',
@@ -331,6 +335,7 @@ void main() {
       em.publishEvent(
         AuthLoggedInEvent(
           serviceName: serviceName,
+          tag: 'main',
           method: 'browser_pkce',
           loggedInAtEpochMs: DateTime.now().millisecondsSinceEpoch,
           keycloakBaseUrl: '',

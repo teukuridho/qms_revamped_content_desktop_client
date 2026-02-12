@@ -16,7 +16,9 @@ class OidcEndpoints {
     final realm = Uri.encodeComponent(config.realm);
 
     final auth = Uri.parse('$base/realms/$realm/protocol/openid-connect/auth');
-    final token = Uri.parse('$base/realms/$realm/protocol/openid-connect/token');
+    final token = Uri.parse(
+      '$base/realms/$realm/protocol/openid-connect/token',
+    );
     final device = Uri.parse(
       '$base/realms/$realm/protocol/openid-connect/auth/device',
     );
@@ -37,4 +39,3 @@ class OidcEndpoints {
     return out;
   }
 }
-

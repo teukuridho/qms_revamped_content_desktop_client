@@ -59,6 +59,7 @@ class CurrencyExchangeRateSynchronizer {
            authService ??
            OidcAuthService(
              serviceName: serviceName,
+             tag: tag,
              serverPropertiesRegistryService: serverPropertiesRegistryService,
            ),
        _downloader = downloader,
@@ -91,7 +92,7 @@ class CurrencyExchangeRateSynchronizer {
 
   void _onAuthLoggedInEvent(AuthLoggedInEvent event) {
     if (_disposed) return;
-    if (event.serviceName != serviceName) return;
+    if (event.serviceName != serviceName || event.tag != tag) return;
     CurrencyExchangeRateSynchronizerLogger.info(
       'AuthLoggedInEvent matched. Starting currency exchange rate SSE subscribe loop (serviceName=$serviceName tag=$tag)',
     );
@@ -137,8 +138,9 @@ class CurrencyExchangeRateSynchronizer {
   }
 
   Future<void> _subscribeOnce(int gen) async {
-    final sp = await _serverPropertiesRegistryService.getOneByServiceName(
+    final sp = await _serverPropertiesRegistryService.getOneByServiceNameAndTag(
       serviceName: serviceName,
+      tag: tag,
     );
     if (sp == null) {
       throw StateError(

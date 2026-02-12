@@ -22,6 +22,7 @@ class OidcAuthService {
   static const String defaultScope = 'openid offline_access';
 
   final String _serviceName;
+  final String _tag;
   final ServerPropertiesRegistryService _serverPropertiesRegistryService;
   final EventManager? _eventManager;
   final KeycloakOidcClient _oidcClient;
@@ -29,10 +30,12 @@ class OidcAuthService {
 
   OidcAuthService({
     required String serviceName,
+    required String tag,
     required ServerPropertiesRegistryService serverPropertiesRegistryService,
     EventManager? eventManager,
     KeycloakOidcClient? oidcClient,
   }) : _serviceName = serviceName,
+       _tag = tag,
        _serverPropertiesRegistryService = serverPropertiesRegistryService,
        _eventManager = eventManager,
        _oidcClient = oidcClient ?? KeycloakOidcClient();
@@ -248,10 +251,11 @@ class OidcAuthService {
   }
 
   Future<void> logout() async {
-    AuthLogger.info('Auth[$_serviceName]: logout (clear tokens)');
-    await _serverPropertiesRegistryService.updateByServiceName(
+    AuthLogger.info('Auth[$_serviceName/$_tag]: logout (clear tokens)');
+    await _serverPropertiesRegistryService.updateByServiceNameAndTag(
       UpdateServiceByNameRequest(
         serviceName: _serviceName,
+        tag: _tag,
         oidcAccessToken: '',
         oidcRefreshToken: '',
         oidcIdToken: '',
@@ -323,9 +327,10 @@ class OidcAuthService {
   }
 
   Future<ServerProperty?> _persistTokenSet(OidcTokenSet tokenSet) async {
-    return _serverPropertiesRegistryService.updateByServiceName(
+    return _serverPropertiesRegistryService.updateByServiceNameAndTag(
       UpdateServiceByNameRequest(
         serviceName: _serviceName,
+        tag: _tag,
         oidcAccessToken: tokenSet.accessToken,
         oidcRefreshToken: tokenSet.refreshToken,
         oidcIdToken: tokenSet.idToken,
@@ -349,6 +354,7 @@ class OidcAuthService {
     em.publishEvent(
       AuthLoggedInEvent(
         serviceName: _serviceName,
+        tag: _tag,
         method: method,
         loggedInAtEpochMs: DateTime.now().millisecondsSinceEpoch,
         keycloakBaseUrl: sp.keycloakBaseUrl,
@@ -390,8 +396,9 @@ class OidcAuthService {
   }
 
   Future<ServerProperty?> _loadServerPropertiesOrNull() async {
-    return _serverPropertiesRegistryService.getOneByServiceName(
+    return _serverPropertiesRegistryService.getOneByServiceNameAndTag(
       serviceName: _serviceName,
+      tag: _tag,
     );
   }
 

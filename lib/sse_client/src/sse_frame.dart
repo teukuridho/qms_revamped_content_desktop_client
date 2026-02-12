@@ -23,4 +23,3 @@ class SseFrame {
   @override
   String toString() => 'SseFrame($fields)';
 }
-

@@ -1,9 +1,5 @@
-enum ProcessStateEnum {
-  none,
-  loading,
-  success,
-  failed
-}
+enum ProcessStateEnum { none, loading, success, failed }
+
 class ProcessState {
   final ProcessStateEnum state;
   final String? errorMessage;
