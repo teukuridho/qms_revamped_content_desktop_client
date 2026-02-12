@@ -7,6 +7,8 @@ import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/view/currency_exchange_rate_table_view.dart';
 import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
 import 'package:qms_revamped_content_desktop_client/media/player/ui/media_player_view.dart';
+import 'package:qms_revamped_content_desktop_client/product/agent/product_feature.dart';
+import 'package:qms_revamped_content_desktop_client/product/view/product_table_view.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -15,6 +17,7 @@ class MainScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final mediaFeature = context.read<MediaFeature>();
     final currencyFeature = context.read<CurrencyExchangeRateFeature>();
+    final productFeature = context.read<ProductFeature>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Main Content')),
@@ -42,7 +45,7 @@ class MainScreen extends StatelessWidget {
           ),
           const Divider(height: 1),
           Expanded(
-            flex: 3,
+            flex: 2,
             child: CurrencyExchangeRateTableView(
               serviceName: AppConfig.currencyExchangeRateServiceName,
               tag: AppConfig.currencyExchangeRateTag,
@@ -52,6 +55,23 @@ class MainScreen extends StatelessWidget {
               registryService: currencyFeature.registryService,
               onReinitializeRequested: () async {
                 await currencyFeature.agent.reinit(startSynchronizer: true);
+              },
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            flex: 2,
+            child: ProductTableView(
+              serviceName: AppConfig.productServiceName,
+              tag: AppConfig.productTag,
+              nameHeader: 'DEPOSITO RP',
+              valueHeader: 'Suk Bunga(%p.a)',
+              eventManager: context.read<EventManager>(),
+              serverPropertiesRegistryService: context
+                  .read<ServerPropertiesRegistryService>(),
+              registryService: productFeature.registryService,
+              onReinitializeRequested: () async {
+                await productFeature.agent.reinit(startSynchronizer: true);
               },
             ),
           ),

@@ -230,8 +230,12 @@ class ApiClient {
           return ProductUpdatedEventDto.fromJson(value);
         case 'RunningTextDto':
           return RunningTextDto.fromJson(value);
+        case 'SubscribeMediaRequest':
+          return SubscribeMediaRequest.fromJson(value);
         case 'SubscribePositionUpdatedRequest':
           return SubscribePositionUpdatedRequest.fromJson(value);
+        case 'SubscribeProductRequest':
+          return SubscribeProductRequest.fromJson(value);
         case 'UpdateCurrencyExchangeRateRequest':
           return UpdateCurrencyExchangeRateRequest.fromJson(value);
         case 'UpdatePositionRequest':

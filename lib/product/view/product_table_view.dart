@@ -1,0 +1,473 @@
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:qms_revamped_content_desktop_client/core/database/app_database.dart';
+import 'package:qms_revamped_content_desktop_client/core/event_manager/event_manager.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/form/ui/view/server_properties_configuration_dialog.dart';
+import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/service/server_properties_registry_service.dart';
+import 'package:qms_revamped_content_desktop_client/core/utility/looping_vertical_auto_scroll.dart';
+import 'package:qms_revamped_content_desktop_client/product/downloader/event/product_download_events.dart';
+import 'package:qms_revamped_content_desktop_client/product/registry/service/product_registry_service.dart';
+
+enum _ProductContextAction { configure, reinitialize }
+
+class ProductTableView extends StatefulWidget {
+  final String serviceName;
+  final String tag;
+  final String nameHeader;
+  final String valueHeader;
+  final EventManager eventManager;
+  final ServerPropertiesRegistryService serverPropertiesRegistryService;
+  final ProductRegistryService registryService;
+  final Future<void> Function()? onReinitializeRequested;
+
+  const ProductTableView({
+    super.key,
+    required this.serviceName,
+    required this.tag,
+    required this.nameHeader,
+    required this.valueHeader,
+    required this.eventManager,
+    required this.serverPropertiesRegistryService,
+    required this.registryService,
+    this.onReinitializeRequested,
+  });
+
+  @override
+  State<ProductTableView> createState() => _ProductTableViewState();
+}
+
+class _ProductTableViewState extends State<ProductTableView> {
+  static const double _headerRowHeight = 46;
+  static const double _bodyRowHeight = 54;
+  static const double _bodyDividerWidth = 1;
+  static const int _infiniteLoopCopies = 5;
+  static const int _infiniteWrapBufferRows = 3;
+  static const double _autoScrollStep = 1.2;
+  static const Duration _autoScrollReferenceTick = Duration(milliseconds: 32);
+
+  static const Map<int, TableColumnWidth> _tableColumnWidths =
+      <int, TableColumnWidth>{0: FlexColumnWidth(3), 1: FlexColumnWidth(2)};
+
+  StreamSubscription<ProductDownloadStartedEvent>? _dlStartSub;
+  StreamSubscription<ProductDownloadSucceededEvent>? _dlOkSub;
+  StreamSubscription<ProductDownloadFailedEvent>? _dlFailSub;
+  final ScrollController _verticalScrollController = ScrollController();
+  late final AutoScrollCoordinator _verticalAutoScrollCoordinator;
+  bool _reinitializeInProgress = false;
+  bool _shouldAutoScroll = false;
+  bool _useInfiniteLoop = false;
+  double _infiniteCycleExtent = 0;
+  ScaffoldMessengerState? _messenger;
+
+  @override
+  void initState() {
+    super.initState();
+    _verticalAutoScrollCoordinator = LoopingVerticalAutoScrollCoordinator(
+      controller: _verticalScrollController,
+      tickDuration: _autoScrollReferenceTick,
+      step: _autoScrollStep,
+      resetToStartWhenAtMaxExtent: false,
+      shouldRun: (_) => _shouldAutoScroll,
+      nextOffset: (position, step) {
+        final raw = position.pixels + step;
+        if (!_useInfiniteLoop || _infiniteCycleExtent <= 0) {
+          return raw;
+        }
+
+        final wrapBufferExtent =
+            _infiniteWrapBufferRows * (_bodyRowHeight + _bodyDividerWidth);
+        final desiredThreshold = (_infiniteCycleExtent * 3) - wrapBufferExtent;
+        final maxAllowedThreshold = position.maxScrollExtent - wrapBufferExtent;
+        final wrapThreshold = math.max(
+          _infiniteCycleExtent,
+          math.min(desiredThreshold, maxAllowedThreshold),
+        );
+        if (raw >= wrapThreshold) {
+          return raw - _infiniteCycleExtent;
+        }
+        return raw;
+      },
+    )..attach();
+
+    _dlStartSub = widget.eventManager
+        .listen<ProductDownloadStartedEvent>()
+        .listen((e) {
+          if (e.serviceName != widget.serviceName || e.tag != widget.tag) {
+            return;
+          }
+          if (!mounted) return;
+          final messenger = _messenger;
+          if (messenger == null || !messenger.mounted) return;
+          messenger.clearSnackBars();
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Syncing products...'),
+              duration: Duration(days: 1),
+            ),
+          );
+        });
+
+    _dlOkSub = widget.eventManager
+        .listen<ProductDownloadSucceededEvent>()
+        .listen((e) {
+          if (e.serviceName != widget.serviceName || e.tag != widget.tag) {
+            return;
+          }
+          if (!mounted) return;
+          final messenger = _messenger;
+          if (messenger == null || !messenger.mounted) return;
+          messenger.clearSnackBars();
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Sync complete (${e.syncedCount} rows)'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        });
+
+    _dlFailSub = widget.eventManager
+        .listen<ProductDownloadFailedEvent>()
+        .listen((e) {
+          if (e.serviceName != widget.serviceName || e.tag != widget.tag) {
+            return;
+          }
+          if (!mounted) return;
+          final messenger = _messenger;
+          if (messenger == null || !messenger.mounted) return;
+          messenger.clearSnackBars();
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Sync failed: ${e.message}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  @override
+  void dispose() {
+    _verticalAutoScrollCoordinator.detach();
+    _verticalScrollController.dispose();
+    // ignore: discarded_futures
+    _dlStartSub?.cancel();
+    // ignore: discarded_futures
+    _dlOkSub?.cancel();
+    // ignore: discarded_futures
+    _dlFailSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _verticalAutoScrollCoordinator.scheduleSync();
+
+    final content = StreamBuilder<List<Product>>(
+      stream: widget.registryService.watchAllByTagOrdered(tag: widget.tag),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final rows = snapshot.data ?? const <Product>[];
+        if (rows.isEmpty) {
+          return const Center(child: Text('No products'));
+        }
+
+        return _buildTable(rows);
+      },
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (details) => _showContextMenu(details.globalPosition),
+      child: content,
+    );
+  }
+
+  Widget _buildTable(List<Product> rows) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableWidth = constraints.maxWidth;
+        final tableHeight = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : (_headerRowHeight + (rows.length * _bodyRowHeight));
+        final bodyViewportHeight = math.max(
+          0,
+          tableHeight - _headerRowHeight - _bodyDividerWidth,
+        );
+        final originalBodyExtent = _estimateBodyExtent(rows.length);
+        final shouldAutoScroll = originalBodyExtent > bodyViewportHeight;
+        final useInfiniteLoop =
+            shouldAutoScroll && rows.isNotEmpty && _infiniteLoopCopies > 1;
+        final infiniteCycleExtent = useInfiniteLoop
+            ? _estimateCycleExtent(rows.length)
+            : 0.0;
+        final visibleRows = useInfiniteLoop
+            ? _buildInfiniteLoopRows(rows)
+            : rows;
+
+        _shouldAutoScroll = shouldAutoScroll;
+        _useInfiniteLoop = useInfiniteLoop;
+        _infiniteCycleExtent = infiniteCycleExtent;
+        _verticalAutoScrollCoordinator.scheduleSync();
+        final verticalBodyScrollView = SingleChildScrollView(
+          controller: _verticalScrollController,
+          child: _buildBodyTable(visibleRows),
+        );
+        final verticalBodyWithoutAutoScrollbar = ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: verticalBodyScrollView,
+        );
+        final verticalScrollable = _useInfiniteLoop
+            ? verticalBodyWithoutAutoScrollbar
+            : Scrollbar(
+                controller: _verticalScrollController,
+                thumbVisibility: true,
+                child: verticalBodyWithoutAutoScrollbar,
+              );
+
+        return NotificationListener<ScrollMetricsNotification>(
+          onNotification: (_) {
+            _verticalAutoScrollCoordinator.onScrollMetricsChanged();
+            return false;
+          },
+          child: SizedBox(
+            width: tableWidth,
+            height: tableHeight,
+            child: Column(
+              children: [
+                _buildHeaderRow(context),
+                const Divider(height: 1),
+                Expanded(child: verticalScrollable),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeaderRow(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Table(
+        columnWidths: _tableColumnWidths,
+        children: [
+          TableRow(
+            children: [
+              _TableHeaderCell(label: widget.nameHeader),
+              _TableHeaderCell(
+                label: widget.valueHeader,
+                alignment: Alignment.centerRight,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBodyTable(List<Product> rows) {
+    final divider = Divider.createBorderSide(context, width: 1);
+
+    return Table(
+      columnWidths: _tableColumnWidths,
+      border: TableBorder(horizontalInside: divider),
+      children: rows
+          .map(
+            (row) => TableRow(
+              children: [
+                _buildBodyCell(
+                  Text(row.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                _buildBodyCell(
+                  Text(
+                    row.value,
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  alignment: Alignment.centerRight,
+                ),
+              ],
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  Widget _buildBodyCell(
+    Widget child, {
+    Alignment alignment = Alignment.centerLeft,
+  }) {
+    return SizedBox(
+      height: _bodyRowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Align(alignment: alignment, child: child),
+      ),
+    );
+  }
+
+  List<Product> _buildInfiniteLoopRows(List<Product> rows) {
+    final loopRowCount = rows.length * _infiniteLoopCopies;
+    return List<Product>.generate(
+      loopRowCount,
+      (index) => rows[index % rows.length],
+      growable: false,
+    );
+  }
+
+  double _estimateBodyExtent(int rowCount) {
+    if (rowCount <= 0) return 0;
+    return (rowCount * _bodyRowHeight) + ((rowCount - 1) * _bodyDividerWidth);
+  }
+
+  double _estimateCycleExtent(int rowCount) {
+    if (rowCount <= 0) return 0;
+    // A full cycle includes one trailing divider to bridge into the next copy.
+    return rowCount * (_bodyRowHeight + _bodyDividerWidth);
+  }
+
+  Future<void> _showContextMenu(Offset globalPosition) async {
+    if (!mounted) return;
+
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
+    final renderObject = overlay.context.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.hasSize ||
+        !renderObject.attached) {
+      return;
+    }
+    final overlayBox = renderObject;
+    final action = await showMenu<_ProductContextAction>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 0, 0),
+        Offset.zero & overlayBox.size,
+      ),
+      items: [
+        const PopupMenuItem<_ProductContextAction>(
+          value: _ProductContextAction.configure,
+          child: Text('Configure Server & Auth'),
+        ),
+        PopupMenuItem<_ProductContextAction>(
+          value: _ProductContextAction.reinitialize,
+          enabled:
+              !_reinitializeInProgress &&
+              widget.onReinitializeRequested != null,
+          child: Text(
+            _reinitializeInProgress
+                ? 'Reinitializing...'
+                : 'Reinitialize Product',
+          ),
+        ),
+      ],
+    );
+
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case _ProductContextAction.configure:
+        await _openConfigurationDialog();
+        break;
+      case _ProductContextAction.reinitialize:
+        await _reinitialize();
+        break;
+    }
+  }
+
+  Future<void> _openConfigurationDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return ServerPropertiesConfigurationDialog(
+          serviceName: widget.serviceName,
+          title: 'Product Configuration',
+          description:
+              'Configure server connection and authentication for this product component.',
+          registryService: widget.serverPropertiesRegistryService,
+          eventManager: widget.eventManager,
+        );
+      },
+    );
+  }
+
+  Future<void> _reinitialize() async {
+    final callback = widget.onReinitializeRequested;
+    if (callback == null || _reinitializeInProgress) return;
+
+    setState(() {
+      _reinitializeInProgress = true;
+    });
+
+    final messenger = _messenger;
+    try {
+      await callback();
+      if (!mounted) return;
+      if (messenger != null && messenger.mounted) {
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Products reinitialized'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      if (messenger != null && messenger.mounted) {
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to reinitialize products: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _reinitializeInProgress = false;
+        });
+      }
+    }
+  }
+}
+
+class _TableHeaderCell extends StatelessWidget {
+  final String label;
+  final Alignment alignment;
+
+  const _TableHeaderCell({
+    required this.label,
+    this.alignment = Alignment.centerLeft,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _ProductTableViewState._headerRowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Align(
+          alignment: alignment,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+}

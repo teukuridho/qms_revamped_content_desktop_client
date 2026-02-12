@@ -6,6 +6,7 @@ import 'package:qms_revamped_content_desktop_client/core/app_directory/app_direc
 import 'package:qms_revamped_content_desktop_client/core/server_properties/registry/entity/server_properties.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/registry/entity/currency_exchange_rate.dart';
 import 'package:qms_revamped_content_desktop_client/media/registry/entity/media.dart';
+import 'package:qms_revamped_content_desktop_client/product/registry/entity/product.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 import 'package:drift/drift.dart';
@@ -14,14 +15,16 @@ import 'app_database.steps.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Media, ServerProperties, CurrencyExchangeRates])
+@DriftDatabase(
+  tables: [Media, ServerProperties, CurrencyExchangeRates, Products],
+)
 class AppDatabase extends _$AppDatabase {
   late final AppDirectoryService _appDirectoryService;
 
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -107,6 +110,10 @@ class AppDatabase extends _$AppDatabase {
 
       if (from >= 8 && from < 9) {
         await _migrateCurrencyExchangeRateBuySellToReal();
+      }
+
+      if (from < 10) {
+        await m.createTable(products);
       }
     },
   );

@@ -11,4 +11,6 @@ class AppConfig {
   static const String currencyExchangeRateServiceName =
       'currency_exchange_rate';
   static const String currencyExchangeRateTag = 'main';
+  static const String productServiceName = 'product';
+  static const String productTag = 'main';
 }

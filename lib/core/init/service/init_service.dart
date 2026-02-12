@@ -6,6 +6,7 @@ import 'package:qms_revamped_content_desktop_client/core/logging/app_log.dart';
 import 'package:qms_revamped_content_desktop_client/core/position_update/subscriber/position_update_subscriber.dart';
 import 'package:qms_revamped_content_desktop_client/currency_exchange_rate/agent/currency_exchange_rate_feature.dart';
 import 'package:qms_revamped_content_desktop_client/media/agent/media_feature.dart';
+import 'package:qms_revamped_content_desktop_client/product/agent/product_feature.dart';
 
 class InitService {
   static final AppLog _log = AppLog('init');
@@ -15,6 +16,7 @@ class InitService {
   late final EventManager _eventManager;
   late final MediaFeature _mediaFeature;
   late final CurrencyExchangeRateFeature _currencyExchangeRateFeature;
+  late final ProductFeature _productFeature;
   late final List<PositionUpdateSubscriber> _positionUpdateSubscribers;
 
   InitService({
@@ -23,6 +25,7 @@ class InitService {
     required EventManager eventManager,
     required MediaFeature mediaFeature,
     required CurrencyExchangeRateFeature currencyExchangeRateFeature,
+    required ProductFeature productFeature,
     required List<PositionUpdateSubscriber> positionUpdateSubscribers,
   }) {
     _appDirectoryService = appDirectoryService;
@@ -30,6 +33,7 @@ class InitService {
     _eventManager = eventManager;
     _mediaFeature = mediaFeature;
     _currencyExchangeRateFeature = currencyExchangeRateFeature;
+    _productFeature = productFeature;
     _positionUpdateSubscribers = positionUpdateSubscribers;
   }
 
@@ -57,6 +61,9 @@ class InitService {
       }),
       InitProcess("Currency Exchange Rate Feature", () async {
         await _currencyExchangeRateFeature.agent.init();
+      }),
+      InitProcess("Product Feature", () async {
+        await _productFeature.agent.init();
       }),
     ];
 
