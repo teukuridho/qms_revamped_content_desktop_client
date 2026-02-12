@@ -54,6 +54,13 @@ dependencies:
   media_kit_video: ^2.0.1
   media_kit_libs_video: ^1.0.7
 
+dependency_overrides:
+  media_kit:
+    git:
+      url: https://github.com/media-kit/media-kit.git
+      ref: 008159a85ed35fb1651d732bf8a20a04a0e1bb1c
+      path: media_kit
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
